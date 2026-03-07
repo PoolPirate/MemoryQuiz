@@ -27,7 +27,34 @@ import { ensureAppStructure } from './services/storage';
 
 process.env.APP_IS_PACKAGED = app.isPackaged ? '1' : '';
 
+const APP_PROTOCOL = 'memoryquiz';
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_PROTOCOL,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true
+    }
+  }
+]);
+
 let mainWindow: BrowserWindow | null = null;
+
+function resolveAppAssetPath(requestUrl: string): string {
+  const { pathname } = new URL(requestUrl);
+  const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
+  const distPath = path.join(app.getAppPath(), 'dist');
+  const assetPath = path.resolve(distPath, relativePath);
+  const pathFromDist = path.relative(distPath, assetPath);
+
+  if (pathFromDist.startsWith('..') || path.isAbsolute(pathFromDist)) {
+    throw new Error(`Blocked protocol path outside dist: ${requestUrl}`);
+  }
+
+  return assetPath;
+}
 
 async function createWindow() {
   await ensureAppStructure();
@@ -57,12 +84,14 @@ async function createWindow() {
   if (devUrl) {
     await mainWindow.loadURL(devUrl);
   } else {
-    await mainWindow.loadFile(path.join(app.getAppPath(), 'dist', 'index.html'));
+    await mainWindow.loadURL(`${APP_PROTOCOL}://app/`);
   }
 }
 
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
+
+  protocol.handle(APP_PROTOCOL, (request) => net.fetch(pathToFileURL(resolveAppAssetPath(request.url)).toString()));
 
   protocol.handle('memoryquiz-media', (request) => {
     const filePath = decodeURIComponent(request.url.replace('memoryquiz-media://', ''));

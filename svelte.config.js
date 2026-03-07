@@ -3,6 +3,8 @@ import adapter from '@sveltejs/adapter-static';
 const config = {
   kit: {
     adapter: adapter({
+      pages: 'dist',
+      assets: 'dist',
       fallback: 'index.html'
     }),
     alias: {
@@ -10,6 +12,9 @@ const config = {
       $stores: 'src/lib/stores',
       $types: 'src/lib/types',
       $utils: 'src/lib/utils'
+    },
+    paths: {
+      relative: true
     }
   }
 };
