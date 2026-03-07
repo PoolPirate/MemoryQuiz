@@ -30,7 +30,7 @@ async function createWindow() {
     backgroundColor: '#f4efe2',
     title: 'MemoryQuiz',
     webPreferences: {
-      preload: path.join(__dirname, '..', 'preload', 'index.js'),
+      preload: path.join(__dirname, '..', 'preload', 'index.cjs'),
       nodeIntegration: false,
       contextIsolation: true
     }
