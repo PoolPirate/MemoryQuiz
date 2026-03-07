@@ -1,0 +1,46 @@
+name: Build Windows App
+
+on:
+  push:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Package MemoryQuiz for Windows
+        run: npm run package:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemoryQuiz-windows-${{ github.sha }}
+          path: |
+            release/*.exe
+            release/latest*.yml
+            release/*.blockmap
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Add workflow summary
+        run: |
+          echo "## Windows build ready" >> $env:GITHUB_STEP_SUMMARY
+          echo "Download the artifact named \\`MemoryQuiz-windows-${{ github.sha }}\\` from this workflow run's Artifacts section." >> $env:GITHUB_STEP_SUMMARY
