@@ -1,141 +1,104 @@
 <script lang="ts">
-  import type { ExportOverview } from '$types/models';
-  import { formatBytes, formatFriendlyDate } from '$utils/game';
+  import type { ExportOverview } from '$lib/types/models';
+  import { formatBytes } from '$utils/game';
 
   interface Props {
     entry: ExportOverview;
-    highlighted?: boolean;
     onSelect: (entry: ExportOverview) => void;
     onRename: (entry: ExportOverview) => void;
-    onReindex: (entry: ExportOverview) => void;
     onDelete: (entry: ExportOverview) => void;
   }
 
-  let { entry, highlighted = false, onSelect, onRename, onReindex, onDelete }: Props = $props();
+  let { entry, onSelect, onRename, onDelete }: Props = $props();
+  const playableCount = $derived.by(() =>
+    Object.values(entry.modeStats).reduce((total, stats) => total + stats.playableCount, 0)
+  );
 
   const statusLabels = {
-    ready: 'Ready to play',
+    ready: 'Ready',
     importing: 'Importing',
     indexing: 'Indexing',
     failed: 'Needs attention',
     missing: 'Missing files'
   } as const;
+
+  const statusClasses: Record<ExportOverview['status'], string> = {
+    ready: 'bg-moss-700/10 text-moss-700',
+    importing: 'bg-clay-500/10 text-clay-600',
+    indexing: 'bg-clay-500/10 text-clay-600',
+    failed: 'bg-danger-500/10 text-danger-500',
+    missing: 'bg-ink/5 text-ink/80'
+  };
 </script>
 
-<article class:highlighted class="export-card panel card-enter">
-  <div class="header-row">
-    <div>
-      <p class="eyebrow">Savegame</p>
-      <h3>{entry.name}</h3>
+<div
+  role="button"
+  tabindex={entry.status === 'ready' ? 0 : -1}
+  class="mq-panel mq-card-enter group flex flex-col gap-6 bg-paper-200/72 p-6 text-left transition-all duration-300 hover:border-clay-500/30 hover:shadow-float {entry.status === 'ready' ? 'cursor-pointer' : 'opacity-60'}"
+  onclick={() => entry.status === 'ready' && onSelect(entry)}
+  onkeydown={(e) => entry.status === 'ready' && (e.key === 'Enter' || e.key === ' ') && onSelect(entry)}
+>
+  <div class="flex w-full items-start justify-between gap-4">
+    <div class="grid gap-1">
+      <div class="flex items-center gap-2">
+        <h3 class="font-display text-2xl leading-none tracking-tight text-ink">{entry.name}</h3>
+      </div>
+      <p class="truncate text-sm text-muted/80">{entry.sourceZipName}</p>
     </div>
-    <span class="pill">{statusLabels[entry.status]}</span>
+
+    <span class={`shrink-0 rounded-full px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-widest ${statusClasses[entry.status]}`}>
+      {statusLabels[entry.status]}
+    </span>
   </div>
 
-  <div class="meta-grid">
-    <div>
-      <span>Imported</span>
-      <strong>{formatFriendlyDate(entry.importedAt ?? entry.createdAt)}</strong>
+  <div class="grid w-full grid-cols-3 gap-4 border-y border-paper-300/40 py-5">
+    <div class="grid gap-0.5">
+      <span class="text-[0.65rem] font-bold uppercase tracking-wider text-muted/60">Photos</span>
+      <strong class="text-base text-ink">{entry.photoCount}</strong>
     </div>
-    <div>
-      <span>Photos indexed</span>
-      <strong>{entry.photoCount}</strong>
+    <div class="grid gap-0.5">
+      <span class="text-[0.65rem] font-bold uppercase tracking-wider text-muted/60">Playable</span>
+      <strong class="text-base text-ink">{playableCount}</strong>
     </div>
-    <div>
-      <span>Location rounds</span>
-      <strong>{entry.modeStats.location.playableCount}</strong>
-    </div>
-    <div>
-      <span>Older vs newer</span>
-      <strong>{entry.modeStats['older-newer'].playableCount}</strong>
-    </div>
-    <div>
-      <span>Best streaks</span>
-      <strong>{entry.modeStats.location.bestStreak} / {entry.modeStats['older-newer'].bestStreak}</strong>
-    </div>
-    <div>
-      <span>On disk</span>
-      <strong>{formatBytes(entry.sizeOnDiskBytes)}</strong>
+    <div class="grid gap-0.5">
+      <span class="text-[0.65rem] font-bold uppercase tracking-wider text-muted/60">Size</span>
+      <strong class="text-base text-ink">{formatBytes(entry.sizeOnDiskBytes)}</strong>
     </div>
   </div>
 
   {#if entry.lastError}
-    <p class="warning">{entry.lastError}</p>
+    <div class="flex w-full gap-2 rounded-xl bg-danger-500/5 p-3 text-xs text-danger-600">
+      <svg class="mt-0.5 shrink-0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <p>{entry.lastError}</p>
+    </div>
   {/if}
 
-  <div class="actions">
-    <button class="button-primary" onclick={() => onSelect(entry)} disabled={entry.status !== 'ready'}>
-      Select export
-    </button>
-    <button class="button-secondary" onclick={() => onRename(entry)}>Rename</button>
-    <button class="button-secondary" onclick={() => onReindex(entry)} disabled={!entry.existsOnDisk}>
-      Re-index
-    </button>
-    <button class="button-danger" onclick={() => onDelete(entry)}>Delete</button>
+  <div class="mt-auto flex w-full items-center justify-between gap-3">
+    <div
+      class="flex h-10 flex-1 items-center justify-center rounded-full bg-linear-to-r from-clay-500 to-clay-600 text-sm font-bold text-ink shadow-md shadow-clay-500/20 transition-all group-hover:-translate-y-0.5 group-hover:shadow-lg group-hover:shadow-clay-500/30 active:translate-y-0"
+      style={entry.status !== 'ready' ? 'opacity: 0.5; pointer-events: none;' : ''}
+    >
+      Play
+    </div>
+
+    <div class="flex gap-1.5" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="presentation">
+      <button
+        type="button"
+        title="Rename"
+        class="flex h-10 w-10 items-center justify-center rounded-full border border-paper-300/60 bg-paper-200/82 text-muted hover:border-clay-500/40 hover:text-clay-600 hover:shadow-sm"
+        onclick={() => onRename(entry)}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+      </button>
+
+      <button
+        type="button"
+        title="Delete"
+        class="flex h-10 w-10 items-center justify-center rounded-full border border-danger-500/20 bg-danger-500/5 text-danger-500 hover:bg-danger-500/10 hover:shadow-sm"
+        onclick={() => onDelete(entry)}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+      </button>
+    </div>
   </div>
-</article>
-
-<style>
-  .export-card {
-    padding: 22px;
-    display: grid;
-    gap: 18px;
-  }
-
-  .highlighted {
-    outline: 3px solid rgba(234, 124, 82, 0.18);
-  }
-
-  .header-row {
-    display: flex;
-    align-items: start;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  .eyebrow,
-  .meta-grid span {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.86rem;
-  }
-
-  h3 {
-    margin: 6px 0 0;
-    font-family: var(--font-display);
-    font-size: 1.5rem;
-  }
-
-  .meta-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .meta-grid div {
-    display: grid;
-    gap: 4px;
-    padding: 12px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.6);
-  }
-
-  .warning {
-    margin: 0;
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: rgba(182, 72, 72, 0.12);
-    color: var(--danger);
-  }
-
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  @media (max-width: 760px) {
-    .meta-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-</style>
+</div>

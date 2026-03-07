@@ -1,6 +1,6 @@
 export type ExportStatus = 'ready' | 'importing' | 'indexing' | 'failed' | 'missing';
 
-export type GameMode = 'location' | 'older-newer';
+export type GameMode = 'location' | 'older-newer' | 'timeline-sort';
 
 export interface GeoPoint {
   lat: number;
@@ -9,6 +9,7 @@ export interface GeoPoint {
 
 export interface ModeStats {
   playableCount: number;
+  activeStreak: number;
   bestStreak: number;
   lastPlayedAt?: string | null;
 }
@@ -36,7 +37,6 @@ export interface ExportOverview extends ExportRegistryEntry {
 export interface AppOverview {
   exports: ExportOverview[];
   lastSelectedExportId?: string | null;
-  appDataRoot: string;
 }
 
 export interface ImportPreview {
@@ -53,11 +53,26 @@ export interface ImportProgressEvent {
   message: string;
 }
 
+export interface ImportSummary {
+  totalImages: number;
+  sourceImageCount: number;
+  issueCount: number;
+  issues: string[];
+  withGeoCount: number;
+  withoutGeoCount: number;
+  withTimestampCount: number;
+  withoutTimestampCount: number;
+}
+
+export interface ImportResult {
+  overview: ExportOverview;
+  summary: ImportSummary;
+}
+
 export interface MediaCard {
   id: string;
   filename: string;
   imageUrl: string;
-  thumbnailUrl: string;
   captureDateLabel?: string | null;
   locationLabel?: string | null;
 }
@@ -77,10 +92,35 @@ export interface OlderVsNewerRound {
   gapDays: number;
 }
 
-export interface ScoreSummary {
-  mode: GameMode;
-  streak: number;
-  playedAt: string;
+export interface TimelineRoundMedia extends MediaCard {
+  captureTs: number;
+}
+
+export interface TimelineSortRound {
+  mode: 'timeline-sort';
+  rangeStartTs: number;
+  rangeEndTs: number;
+  items: TimelineRoundMedia[];
+  newlyAddedId: string;
+}
+
+export type PendingRoundState = PendingLocationRound | PendingOlderVsNewerRound | PendingTimelineSortRound;
+
+export interface PendingLocationRound {
+  mode: 'location';
+  mediaId: string;
+}
+
+export interface PendingOlderVsNewerRound {
+  mode: 'older-newer';
+  leftId: string;
+  rightId: string;
+}
+
+export interface PendingTimelineSortRound {
+  mode: 'timeline-sort';
+  itemIds: string[];
+  newlyAddedId: string;
 }
 
 export interface AppState {
@@ -102,7 +142,6 @@ export interface MediaIndexRecord {
   lat?: number | null;
   lng?: number | null;
   albumNames: string[];
-  thumbnailRelativePath?: string | null;
   locationScore: number;
   dateScore: number;
   generalScore: number;

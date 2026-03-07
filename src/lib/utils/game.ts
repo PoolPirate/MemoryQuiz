@@ -1,4 +1,4 @@
-export const LOCATION_RADII_KM = [2000, 1000, 500, 250, 100, 50, 25];
+export const LOCATION_RADII_KM = [1000, 750, 500, 250, 100, 50, 40, 30, 20, 10, 9, 8, 7, 6, 5, 4, 3];
 
 export function getAllowedRadiusKm(streak: number): number {
   return LOCATION_RADII_KM[Math.min(streak, LOCATION_RADII_KM.length - 1)];
@@ -22,11 +22,6 @@ export function haversineKm(
   return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function getDateGapThresholdDays(streak: number): number {
-  const thresholds = [365 * 4, 365 * 2, 365, 180, 90, 30, 7];
-  return thresholds[Math.min(streak, thresholds.length - 1)];
-}
-
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -44,13 +39,18 @@ export function formatBytes(bytes: number): string {
   return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-export function formatFriendlyDate(iso?: string | null): string {
-  if (!iso) {
-    return 'Never';
+export function clampTimelinePosition(position: number): number {
+  return Math.min(0.98, Math.max(0.02, position));
+}
+
+export function getTimelineTimePosition(
+  captureTs: number,
+  rangeStartTs: number,
+  rangeEndTs: number
+): number {
+  if (rangeEndTs <= rangeStartTs) {
+    return 0.5;
   }
 
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }).format(new Date(iso));
+  return clampTimelinePosition((captureTs - rangeStartTs) / (rangeEndTs - rangeStartTs));
 }

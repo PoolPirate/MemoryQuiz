@@ -5,9 +5,9 @@ MemoryQuiz is a SvelteKit + Electron desktop app that turns Google Photos Takeou
 ## What it does
 
 - imports one or more Google Photos Takeout `.zip` exports into local app storage
-- treats every export as its own savegame with isolated highscores and history
+- treats every export as its own library with isolated highscores and history
 - shows export size, indexed counts, and management actions on startup
-- includes two game modes: `LocationGuessr` and `OlderVsNewer`
+- includes three game modes: `LocationGuessr`, `OlderVsNewer`, and `Memory Timeline`
 
 ## Development
 

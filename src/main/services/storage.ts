@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { shell } from 'electron';
 
 import { getAppDataRoot } from '../config';
@@ -10,9 +10,10 @@ export interface ExportPaths {
   zipPath: string;
   extractedDir: string;
   dbPath: string;
-  thumbnailsDir: string;
   manifestPath: string;
 }
+
+const FILE_REPLACE_RETRY_DELAYS_MS = [20, 50, 100, 200];
 
 export function getRootPaths() {
   const root = getAppDataRoot();
@@ -33,7 +34,6 @@ export function getExportPaths(exportId: string): ExportPaths {
     zipPath: path.join(root, 'source.zip'),
     extractedDir: path.join(root, 'extracted'),
     dbPath: path.join(root, 'index.sqlite'),
-    thumbnailsDir: path.join(root, 'thumbnails'),
     manifestPath: path.join(root, 'manifest.json')
   };
 }
@@ -49,7 +49,6 @@ export async function ensureExportStructure(exportId: string): Promise<ExportPat
   const paths = getExportPaths(exportId);
   await fs.mkdir(paths.root, { recursive: true });
   await fs.mkdir(paths.extractedDir, { recursive: true });
-  await fs.mkdir(paths.thumbnailsDir, { recursive: true });
   return paths;
 }
 
@@ -101,9 +100,42 @@ export async function hashFile(filePath: string): Promise<string> {
 }
 
 export async function writeJsonFile(filePath: string, value: unknown): Promise<void> {
-  const tempPath = `${filePath}.tmp`;
-  await fs.writeFile(tempPath, JSON.stringify(value, null, 2), 'utf8');
+  const tempPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+
+  try {
+    await fs.writeFile(tempPath, JSON.stringify(value, null, 2), 'utf8');
+    await replaceFileWithRetry(tempPath, filePath);
+  } finally {
+    await fs.rm(tempPath, { force: true });
+  }
+}
+
+async function replaceFileWithRetry(tempPath: string, filePath: string): Promise<void> {
+  for (const delayMs of [0, ...FILE_REPLACE_RETRY_DELAYS_MS]) {
+    if (delayMs > 0) {
+      await wait(delayMs);
+    }
+
+    try {
+      await fs.rename(tempPath, filePath);
+      return;
+    } catch (error) {
+      if (!isTransientRenameError(error)) {
+        throw error;
+      }
+    }
+  }
+
   await fs.rename(tempPath, filePath);
+}
+
+function isTransientRenameError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  return code === 'EPERM' || code === 'EBUSY' || code === 'EACCES';
+}
+
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 export async function removeExportDirectory(exportId: string): Promise<void> {
@@ -117,4 +149,21 @@ export async function removeExportDirectory(exportId: string): Promise<void> {
   } catch {
     await fs.rm(paths.root, { recursive: true, force: true });
   }
+}
+
+export async function removeExportMediaFile(exportId: string, relativePath: string): Promise<void> {
+  const filePath = path.join(getExportPaths(exportId).root, relativePath);
+  if (!(await pathExists(filePath))) {
+    return;
+  }
+
+  try {
+    await shell.trashItem(filePath);
+  } catch {
+    await fs.rm(filePath, { force: true });
+  }
+}
+
+export async function purgeExportDirectory(exportId: string): Promise<void> {
+  await fs.rm(getExportPaths(exportId).root, { recursive: true, force: true });
 }

@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { availableParallelism } from 'node:os';
 
 import * as exifr from 'exifr';
 import { lookup as lookupMimeType } from 'mime-types';
@@ -9,9 +10,11 @@ import sharp from 'sharp';
 import type { ImportProgressEvent, MediaIndexRecord } from '../../lib/types/models';
 
 import { logLine } from './logger';
-import { hashFile, pathExists } from './storage';
+import { hashFile } from './storage';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']);
+const JSON_SUFFIX = '.json';
+const INDEXING_CONCURRENCY = Math.max(1, Math.min(4, availableParallelism()));
 
 interface SidecarData {
   photoTakenTime?: { timestamp?: string };
@@ -22,64 +25,88 @@ interface SidecarData {
 }
 
 interface ParseOptions {
-  exportRoot: string;
   extractedDir: string;
-  thumbnailsDir: string;
   onProgress?: (event: ImportProgressEvent) => void;
+}
+
+export interface ParseTakeoutResult {
+  records: MediaIndexRecord[];
+  sourceImageCount: number;
+  issues: string[];
 }
 
 interface ParsedMedia extends MediaIndexRecord {
   representativeWeight: number;
 }
 
-export async function parseTakeoutMedia(options: ParseOptions): Promise<MediaIndexRecord[]> {
+export async function parseTakeoutMedia(options: ParseOptions): Promise<ParseTakeoutResult> {
   const files = await walkDirectory(options.extractedDir);
   const imageFiles = files.filter((filePath) => IMAGE_EXTENSIONS.has(path.extname(filePath).toLowerCase()));
-  const jsonFiles = files.filter((filePath) => path.extname(filePath).toLowerCase() === '.json');
-  const sidecarMap = new Map<string, string>();
-
-  for (const jsonFile of jsonFiles) {
-    const relative = path.relative(options.extractedDir, jsonFile).replaceAll('\\', '/');
-    sidecarMap.set(normalizeSidecarKey(relative), jsonFile);
-  }
+  const jsonFiles = files.filter((filePath) => path.extname(filePath).toLowerCase() === JSON_SUFFIX);
+  const sidecarMap = buildSidecarMap(options.extractedDir, imageFiles, jsonFiles);
+  const issues: string[] = [];
 
   const mediaByHash = new Map<string, ParsedMedia>();
+  const parsedResults = new Array<ParsedMedia | null>(imageFiles.length).fill(null);
+  const workerCount = Math.min(imageFiles.length, INDEXING_CONCURRENCY);
+  let nextIndex = 0;
+  let completedCount = 0;
 
-  for (const [index, imageFile] of imageFiles.entries()) {
-    try {
-      const parsed = await parseSingleImage(imageFile, sidecarMap, options);
-      if (!parsed) {
-        continue;
-      }
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const index = nextIndex;
+        nextIndex += 1;
 
-      const existing = mediaByHash.get(parsed.contentHash);
-      if (existing) {
-        existing.albumNames = Array.from(new Set([...existing.albumNames, ...parsed.albumNames]));
-        if (parsed.representativeWeight > existing.representativeWeight) {
-          mediaByHash.set(parsed.contentHash, {
-            ...parsed,
-            albumNames: existing.albumNames
-          });
+        if (index >= imageFiles.length) {
+          return;
         }
-      } else {
-        mediaByHash.set(parsed.contentHash, parsed);
+
+        const imageFile = imageFiles[index];
+        if (!imageFile) {
+          continue;
+        }
+
+        try {
+          parsedResults[index] = await parseSingleImage(imageFile, sidecarMap, options);
+        } catch (error) {
+          const issue = `Failed to parse ${path.basename(imageFile)}: ${(error as Error).message}`;
+          issues.push(issue);
+          await logLine('import-warnings.log', `${issue} (${imageFile})`);
+        } finally {
+          completedCount += 1;
+          reportIndexingProgress(options.onProgress, completedCount, imageFiles.length);
+        }
       }
-    } catch (error) {
-      await logLine('import-warnings.log', `Failed to parse ${imageFile}: ${(error as Error).message}`);
+    })
+  );
+
+  for (const parsed of parsedResults) {
+    if (!parsed) {
+      continue;
     }
 
-    if (options.onProgress && imageFiles.length > 0 && index % 10 === 0) {
-      options.onProgress({
-        stage: 'indexing',
-        progress: 0.55 + (index / imageFiles.length) * 0.35,
-        message: `Indexing photo ${index + 1} of ${imageFiles.length}`
-      });
+    const existing = mediaByHash.get(parsed.contentHash);
+    if (existing) {
+      existing.albumNames = Array.from(new Set([...existing.albumNames, ...parsed.albumNames]));
+      if (parsed.representativeWeight > existing.representativeWeight) {
+        mediaByHash.set(parsed.contentHash, {
+          ...parsed,
+          albumNames: existing.albumNames
+        });
+      }
+    } else {
+      mediaByHash.set(parsed.contentHash, parsed);
     }
   }
 
   const records = Array.from(mediaByHash.values());
   applyBurstPenalties(records);
-  return records.sort((left, right) => right.generalScore - left.generalScore);
+  return {
+    records: records.sort((left, right) => right.generalScore - left.generalScore),
+    sourceImageCount: imageFiles.length,
+    issues
+  };
 }
 
 async function parseSingleImage(
@@ -89,7 +116,7 @@ async function parseSingleImage(
 ): Promise<ParsedMedia | null> {
   const sourceRelativePath = path.relative(options.extractedDir, imageFile).replaceAll('\\', '/');
   const relativePath = path.join('extracted', sourceRelativePath).replaceAll('\\', '/');
-  const sidecar = await readSidecar(imageFile, sourceRelativePath, sidecarMap);
+  const sidecar = await readSidecar(sourceRelativePath, sidecarMap);
   const metadata = await sharp(imageFile).metadata();
   const width = metadata.width ?? 0;
   const height = metadata.height ?? 0;
@@ -102,27 +129,13 @@ async function parseSingleImage(
   const exif = await exifr.parse(imageFile, ['DateTimeOriginal', 'latitude', 'longitude']).catch(() => null);
   const captureTs =
     readTimestamp(sidecar) ??
-    (exif?.DateTimeOriginal instanceof Date ? exif.DateTimeOriginal.getTime() : null) ??
-    (await fs.stat(imageFile)).mtimeMs;
+    (exif?.DateTimeOriginal instanceof Date ? exif.DateTimeOriginal.getTime() : null);
   const geo = readGeo(sidecar, exif);
   const albumName = deriveAlbumName(sourceRelativePath);
   const isScreenshot = /screenshot|screen shot|screen_shot/i.test(path.basename(imageFile));
   const albumNames = albumName ? [albumName] : [];
   const pixels = width * height;
   const meetsResolution = pixels >= 1100 * 700;
-  const thumbnailRelativePath = path.join('thumbnails', `${contentHash}.jpg`).replaceAll('\\', '/');
-
-  if (meetsResolution && !(await pathExists(path.join(options.exportRoot, thumbnailRelativePath)))) {
-    try {
-      await sharp(imageFile)
-        .rotate()
-        .resize({ width: 1200, height: 900, fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 82 })
-        .toFile(path.join(options.exportRoot, thumbnailRelativePath));
-    } catch {
-      await logLine('import-warnings.log', `Thumbnail generation failed for ${imageFile}`);
-    }
-  }
 
   const resolutionBonus = Math.min(18, pixels / 600000);
   const albumBonus = albumNames.length > 0 ? 8 : 0;
@@ -163,7 +176,6 @@ async function parseSingleImage(
     lat: geo?.lat ?? null,
     lng: geo?.lng ?? null,
     albumNames,
-    thumbnailRelativePath,
     locationScore,
     dateScore,
     generalScore,
@@ -173,20 +185,84 @@ async function parseSingleImage(
   };
 }
 
+function reportIndexingProgress(
+  onProgress: ParseOptions['onProgress'],
+  completedCount: number,
+  totalCount: number
+): void {
+  if (!onProgress || totalCount === 0) {
+    return;
+  }
+
+  onProgress({
+    stage: 'indexing',
+    progress: 0.55 + (completedCount / totalCount) * 0.35,
+    message: `Indexing photo ${completedCount} of ${totalCount}`
+  });
+}
+
 async function readSidecar(
-  imageFile: string,
   sourceRelativePath: string,
   sidecarMap: Map<string, string>
 ): Promise<SidecarData | null> {
-  const directPath = `${imageFile}.json`;
-  const sourceKey = normalizeSidecarKey(`${sourceRelativePath}.json`);
-  const candidate = (await pathExists(directPath)) ? directPath : sidecarMap.get(sourceKey);
+  const candidate = sidecarMap.get(normalizeSidecarKey(sourceRelativePath));
   if (!candidate) {
     return null;
   }
 
+  return readSidecarFile(candidate);
+}
+
+function buildSidecarMap(extractedDir: string, imageFiles: string[], jsonFiles: string[]): Map<string, string> {
+  const sidecarFilesByDirectory = new Map<string, Array<{ normalizedName: string; filePath: string }>>();
+
+  for (const jsonFile of jsonFiles) {
+    const relativePath = path.relative(extractedDir, jsonFile).replaceAll('\\', '/');
+    const normalizedRelativePath = normalizeSidecarKey(relativePath);
+    const directory = path.posix.dirname(normalizedRelativePath);
+    const filename = path.posix.basename(normalizedRelativePath);
+    const bucket = sidecarFilesByDirectory.get(directory) ?? [];
+    bucket.push({ normalizedName: filename, filePath: jsonFile });
+    sidecarFilesByDirectory.set(directory, bucket);
+  }
+
+  const sidecarMap = new Map<string, string>();
+
+  for (const imageFile of imageFiles) {
+    const relativePath = path.relative(extractedDir, imageFile).replaceAll('\\', '/');
+    const normalizedRelativePath = normalizeSidecarKey(relativePath);
+    const directory = path.posix.dirname(normalizedRelativePath);
+    const filename = path.posix.basename(normalizedRelativePath);
+    const candidates = sidecarFilesByDirectory.get(directory) ?? [];
+    const matchedSidecar = findMatchingSidecar(filename, candidates);
+
+    if (matchedSidecar) {
+      sidecarMap.set(normalizedRelativePath, matchedSidecar.filePath);
+    }
+  }
+
+  return sidecarMap;
+}
+
+function findMatchingSidecar(
+  imageFilename: string,
+  candidates: Array<{ normalizedName: string; filePath: string }>
+): { normalizedName: string; filePath: string } | null {
+  const matches = candidates.filter((candidate) =>
+    candidate.normalizedName.startsWith(imageFilename) && candidate.normalizedName.endsWith(JSON_SUFFIX)
+  );
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  matches.sort((left, right) => left.normalizedName.length - right.normalizedName.length || left.normalizedName.localeCompare(right.normalizedName));
+  return matches[0] ?? null;
+}
+
+async function readSidecarFile(filePath: string): Promise<SidecarData | null> {
   try {
-    const raw = await fs.readFile(candidate, 'utf8');
+    const raw = await fs.readFile(filePath, 'utf8');
     return JSON.parse(raw) as SidecarData;
   } catch {
     return null;
@@ -213,16 +289,27 @@ function readGeo(
 ): { lat: number; lng: number } | null {
   const candidates = [sidecar?.geoDataExif, sidecar?.geoData];
   for (const candidate of candidates) {
-    if (candidate && typeof candidate.latitude === 'number' && typeof candidate.longitude === 'number') {
+    if (hasUsableCoordinates(candidate)) {
       return { lat: candidate.latitude, lng: candidate.longitude };
     }
   }
 
-  if (typeof exif?.latitude === 'number' && typeof exif?.longitude === 'number') {
+  if (hasUsableCoordinates(exif)) {
     return { lat: exif.latitude, lng: exif.longitude };
   }
 
   return null;
+}
+
+function hasUsableCoordinates(value: { latitude?: number; longitude?: number } | null | undefined): value is {
+  latitude: number;
+  longitude: number;
+} {
+  if (!value || !Number.isFinite(value.latitude) || !Number.isFinite(value.longitude)) {
+    return false;
+  }
+
+  return !(value.latitude === 0 && value.longitude === 0);
 }
 
 function deriveAlbumName(sourceRelativePath: string): string | null {

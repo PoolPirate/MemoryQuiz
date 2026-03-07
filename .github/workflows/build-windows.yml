@@ -21,10 +21,7 @@ jobs:
         run: npm ci
 
       - name: Typecheck
-        run: npm run typecheck
-
-      - name: Run tests
-        run: npm test
+        run: npm run check
 
       - name: Package MemoryQuiz for Windows
         run: npm run package:win

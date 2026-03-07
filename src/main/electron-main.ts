@@ -1,16 +1,25 @@
 import path from 'node:path';
 
-import { app, BrowserWindow, ipcMain, net, protocol, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, net, protocol, shell } from 'electron';
 import { pathToFileURL } from 'node:url';
 
-import { createLocationRound, createOlderVsNewerRound, saveRunResult } from './services/game';
+import type { ImportPreview } from '../lib/types/models';
+
+import {
+  createLocationRound,
+  createOlderVsNewerRound,
+  createTimelineSortRound,
+  deleteMedia,
+  saveRunResult,
+  saveSeenMediaIds
+} from './services/game';
 import {
   buildExportOverview,
   deleteExport,
   getAppOverview,
   importZipFile,
   openImportPicker,
-  reindexExport,
+  previewImportFile,
   renameExport,
   selectExport
 } from './services/import';
@@ -29,12 +38,15 @@ async function createWindow() {
     minHeight: 720,
     backgroundColor: '#f4efe2',
     title: 'MemoryQuiz',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'index.cjs'),
       nodeIntegration: false,
       contextIsolation: true
     }
   });
+
+  mainWindow.setMenuBarVisibility(false);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -50,6 +62,8 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  Menu.setApplicationMenu(null);
+
   protocol.handle('memoryquiz-media', (request) => {
     const filePath = decodeURIComponent(request.url.replace('memoryquiz-media://', ''));
     return net.fetch(pathToFileURL(filePath).toString());
@@ -58,24 +72,22 @@ app.whenReady().then(async () => {
   ipcMain.handle('memoryquiz:get-app-overview', () => getAppOverview());
   ipcMain.handle('memoryquiz:open-takeout-link', () => shell.openExternal('https://takeout.google.com/'));
   ipcMain.handle('memoryquiz:pick-import-zip', () => openImportPicker());
-  ipcMain.handle('memoryquiz:import-zip', async (event, filePath: string, allowDuplicate?: boolean) =>
-    importZipFile(filePath, allowDuplicate, (progress) => {
-      event.sender.send('memoryquiz:import-progress', progress);
-    })
+  ipcMain.handle('memoryquiz:preview-import-zip', (_event, filePath: string) => previewImportFile(filePath));
+  ipcMain.handle(
+    'memoryquiz:import-zip',
+    async (event, preview: ImportPreview, libraryName: string, allowDuplicate?: boolean) =>
+      importZipFile(preview, libraryName, allowDuplicate, (progress) => {
+        event.sender.send('memoryquiz:import-progress', progress);
+      })
   );
   ipcMain.handle('memoryquiz:select-export', (_event, exportId: string) => selectExport(exportId));
   ipcMain.handle('memoryquiz:rename-export', (_event, exportId: string, name: string) => renameExport(exportId, name));
   ipcMain.handle('memoryquiz:delete-export', (_event, exportId: string) => deleteExport(exportId));
-  ipcMain.handle('memoryquiz:reindex-export', async (event, exportId: string) =>
-    reindexExport(exportId, (progress) => {
-      event.sender.send('memoryquiz:import-progress', progress);
-    })
-  );
   ipcMain.handle('memoryquiz:get-mode-overview', (_event, exportId: string) =>
     getAppOverview().then((overview) => {
       const entry = overview.exports.find((candidate) => candidate.id === exportId);
       if (!entry) {
-        throw new Error('Savegame not found.');
+        throw new Error('Library not found.');
       }
       return buildExportOverview(entry);
     })
@@ -85,13 +97,31 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle(
     'memoryquiz:create-older-newer-round',
-    (_event, exportId: string, seenIds: string[], streak: number) =>
-      createOlderVsNewerRound(exportId, seenIds, streak)
+    (_event, exportId: string, seenIds: string[]) => createOlderVsNewerRound(exportId, seenIds)
+  );
+  ipcMain.handle(
+    'memoryquiz:create-timeline-sort-round',
+    (_event, exportId: string, seenIds: string[], currentMediaIds: string[]) =>
+      createTimelineSortRound(exportId, seenIds, currentMediaIds)
+  );
+  ipcMain.handle('memoryquiz:delete-media', (_event, exportId: string, mediaId: string) =>
+    deleteMedia(exportId, mediaId)
   );
   ipcMain.handle(
     'memoryquiz:save-run-result',
-    (_event, exportId: string, mode: 'location' | 'older-newer', streak: number, seenIds: string[]) =>
+    (_event, exportId: string, mode: 'location' | 'older-newer' | 'timeline-sort', streak: number, seenIds: string[]) =>
       saveRunResult(exportId, mode, streak, seenIds)
+  );
+  ipcMain.handle(
+    'memoryquiz:save-seen-media-ids',
+    (
+      _event,
+      exportId: string,
+      mode: 'location' | 'older-newer' | 'timeline-sort',
+      streak: number,
+      seenIds: string[],
+      pendingRound
+    ) => saveSeenMediaIds(exportId, mode, streak, seenIds, pendingRound)
   );
 
   await createWindow();
