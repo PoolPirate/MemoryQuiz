@@ -14,29 +14,31 @@
 </script>
 
 <article
-  class="mq-panel mq-card-enter grid gap-5 p-6"
-  style={`background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper-100) 94%, #000 6%), color-mix(in srgb, var(--color-paper-200) 84%, #000 16%)), linear-gradient(135deg, color-mix(in srgb, ${accent} 74%, #0f1623 26%), transparent);`}
+  class="mq-panel mq-card-enter group grid gap-5 p-6 transition-transform duration-300 hover:-rotate-[0.35deg] hover:scale-[1.01]"
+  style={`background: linear-gradient(165deg, color-mix(in srgb, var(--color-paper-100) 92%, transparent), color-mix(in srgb, var(--color-paper-200) 88%, transparent)), radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, ${accent} 55%, transparent), transparent 62%);`}
 >
   <div>
-    <p class="text-sm font-medium text-muted">Game mode</p>
-    <h3 class="mt-2 font-display text-[1.7rem] leading-none tracking-tight text-ink">{title}</h3>
-    <p class="mt-2 text-sm leading-6 text-muted">{subtitle}</p>
+    <p class="font-display text-xs font-bold uppercase tracking-[0.2em] text-candy-mint/90">Game mode</p>
+    <h3 class="mt-2 font-display text-[1.85rem] leading-none tracking-tight text-ink drop-shadow-[0_2px_0_color-mix(in_srgb,var(--color-pop)_35%,transparent)]">
+      {title}
+    </h3>
+    <p class="mt-2 text-sm leading-7 text-muted">{subtitle}</p>
   </div>
 
   <div class="grid gap-3 sm:grid-cols-3">
     <div class="mq-metric-card">
-      <span class="text-sm font-medium text-muted">Playable photos</span>
-      <strong class="text-[1.02rem] text-ink">{count}</strong>
+      <span class="text-xs font-bold uppercase tracking-wider text-muted">Playable photos</span>
+      <strong class="font-display text-[1.15rem] text-candy-lemon">{count}</strong>
     </div>
 
     <div class="mq-metric-card">
-      <span class="text-sm font-medium text-muted">Active streak</span>
-      <strong class="text-[1.02rem] text-ink">{activeStreak}</strong>
+      <span class="text-xs font-bold uppercase tracking-wider text-muted">Active streak</span>
+      <strong class="font-display text-[1.15rem] text-candy-mint">{activeStreak}</strong>
     </div>
 
     <div class="mq-metric-card">
-      <span class="text-sm font-medium text-muted">Best streak</span>
-      <strong class="text-[1.02rem] text-ink">{bestStreak}</strong>
+      <span class="text-xs font-bold uppercase tracking-wider text-muted">Best streak</span>
+      <strong class="font-display text-[1.15rem] text-candy-pink">{bestStreak}</strong>
     </div>
   </div>
 

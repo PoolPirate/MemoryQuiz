@@ -208,22 +208,22 @@
 <svelte:window onpointermove={handlePointerMove} onpointerup={handlePointerUp} onpointercancel={handlePointerUp} />
 
 <section class="mq-panel relative overflow-hidden px-4 pb-6 pt-8 sm:px-6">
-  <div class="pointer-events-none absolute inset-x-5 top-0 h-32 bg-linear-to-b from-paper-300/35 to-transparent"></div>
+  <div class="pointer-events-none absolute inset-x-5 top-0 h-32 bg-linear-to-b from-candy-grape/25 to-transparent"></div>
 
   <div class="grid gap-3">
     <div class="flex items-center justify-between gap-3 px-1">
       <div>
-        <p class="text-xs font-bold uppercase tracking-[0.24em] text-clay-600/80">Timeline</p>
-        <p class="text-sm text-muted">Drag the new photo marker above the line. Locked photos stay below on their true dates.</p>
+        <p class="font-display text-xs font-bold uppercase tracking-[0.24em] text-candy-mint">Timeline</p>
+        <p class="text-sm leading-6 text-muted">Drag the new photo marker above the line. Locked photos stay below on their true dates.</p>
       </div>
-      <div class="rounded-full border border-paper-300/70 bg-paper-200/82 px-3 py-1.5 text-xs font-semibold text-muted">
+      <div class="rounded-full border-[2px] border-candy-lemon/35 bg-paper-200/82 px-3 py-1.5 font-display text-xs font-bold text-candy-lemon">
         {items.length - getActiveCount()} locked / {getActiveCount()} active
       </div>
     </div>
 
-    <div class="relative min-h-[320px] rounded-[26px] border border-paper-300/65 bg-[linear-gradient(180deg,rgba(47,54,73,0.82),rgba(21,31,48,0.96))] px-3 pb-5 pt-8 sm:px-4">
+    <div class="mq-timeline-track relative min-h-[320px] rounded-[1.75rem] border-[3px] border-ink/10 px-3 pb-5 pt-8 sm:px-4">
       <div bind:this={trackElement} class="relative h-[260px]">
-        <div class="absolute inset-x-0 top-[120px] h-px bg-linear-to-r from-clay-500/35 via-moss-500/35 to-clay-500/35"></div>
+        <div class="absolute inset-x-0 top-[120px] h-[3px] rounded-full bg-linear-to-r from-candy-pink via-candy-lemon to-candy-mint opacity-90"></div>
 
         <div class="absolute inset-x-0 top-[102px] grid grid-cols-6 gap-0">
           {#each getTickTimestamps() as tickTs}

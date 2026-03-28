@@ -137,7 +137,7 @@
   let renameInput: HTMLInputElement | null = null;
 
   const flashBaseClass =
-    'mq-card-enter grid gap-3 rounded-[24px] border px-5 py-4 shadow-[0_12px_26px_rgba(77,61,45,0.08)]';
+    'mq-card-enter mq-bubble grid gap-3 rounded-[1.75rem] border-[3px] border-ink/10 px-5 py-4 shadow-[6px_6px_0_color-mix(in_srgb,var(--color-pop)_72%,transparent)]';
 
   const takeoutSteps = [
     {
@@ -1025,20 +1025,20 @@
 
 <div class="mq-shell">
   <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-clay-300/30 blur-3xl"></div>
-    <div class="absolute right-[-6rem] top-40 h-80 w-80 rounded-full bg-moss-300/30 blur-3xl"></div>
-    <div class="absolute bottom-[-8rem] left-1/3 h-96 w-96 rounded-full bg-paper-100/70 blur-3xl"></div>
+    <div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-candy-pink/25 blur-3xl"></div>
+    <div class="absolute right-[-6rem] top-40 h-80 w-80 rounded-full bg-candy-grape/25 blur-3xl"></div>
+    <div class="absolute bottom-[-8rem] left-1/3 h-96 w-96 rounded-full bg-candy-mint/20 blur-3xl"></div>
   </div>
 
   <div class={view === 'playing' && gameMode === 'location' ? 'absolute inset-0 z-10 bg-ink overflow-hidden flex flex-col' : 'mx-auto flex max-w-7xl flex-col gap-8 pb-20 pt-10'}>
     {#if view === 'menu'}
       <header class="mq-card-enter grid gap-3 px-6 text-center lg:px-8">
         <span class="mq-pill mx-auto">MemoryQuiz</span>
-        <h1 class="font-display text-[clamp(2rem,5vw,3.5rem)] leading-tight tracking-tight text-ink">
+        <h1 class="mq-gradient-title font-display text-[clamp(2.2rem,5.2vw,3.75rem)] leading-[1.05] tracking-tight">
           Your Libraries
         </h1>
         <p class="mq-copy mx-auto max-w-2xl text-lg">
-          Choose a library to play with. Each library is imported from a Google Photos Takeout export.
+          Pick a library and play silly memory games with your own photos. Imports come from a Google Photos Takeout zip.
         </p>
       </header>
 
@@ -1075,10 +1075,10 @@
           {/if}
 
           <button
-            class="mq-panel mq-card-enter group flex min-h-[280px] flex-col items-center justify-center gap-4 border-2 border-dashed border-clay-500/30 bg-paper-200/55 p-8 transition-all hover:border-clay-500/60 hover:bg-paper-200/72"
+            class="mq-panel mq-card-enter group flex min-h-[280px] flex-col items-center justify-center gap-4 border-[3px] border-dashed border-candy-mint/45 bg-paper-200/55 p-8 transition-all hover:-rotate-[0.4deg] hover:border-candy-pink/55 hover:bg-paper-200/72"
             onclick={openSetupModal}
           >
-            <div class="grid h-16 w-16 place-items-center rounded-full bg-clay-500/10 text-clay-600 transition-transform group-hover:scale-110">
+            <div class="grid h-16 w-16 place-items-center rounded-full border-[3px] border-pop bg-linear-to-br from-candy-pink to-candy-lemon text-pop shadow-[4px_4px_0_var(--color-pop)] transition-transform group-hover:scale-110">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -1130,7 +1130,7 @@
             activeStreak={activeExport.modeStats.location.activeStreak}
             bestStreak={activeExport.modeStats.location.bestStreak}
             disabled={activeExport.modeStats.location.playableCount < 1}
-            accent="#2f8f62"
+            accent="#5cf0c8"
             onPlay={() => startMode('location')}
           />
           <ModeCard
@@ -1140,7 +1140,7 @@
             activeStreak={activeExport.modeStats['older-newer'].activeStreak}
             bestStreak={activeExport.modeStats['older-newer'].bestStreak}
             disabled={activeExport.modeStats['older-newer'].playableCount < 2}
-            accent="#d97706"
+            accent="#ffe566"
             onPlay={() => startMode('older-newer')}
           />
           <ModeCard
@@ -1150,7 +1150,7 @@
             activeStreak={activeExport.modeStats['timeline-sort'].activeStreak}
             bestStreak={activeExport.modeStats['timeline-sort'].bestStreak}
             disabled={activeExport.modeStats['timeline-sort'].playableCount < 2}
-            accent="#2d6aa3"
+            accent="#b388ff"
             onPlay={() => startMode('timeline-sort')}
           />
         </div>
@@ -1163,9 +1163,8 @@
         {@const rightIsNewer = roundStatus === 'result' && olderNewerRound.correctSide === 'right'}
         
         <div class="fixed inset-0 z-0">
-          <div class="absolute inset-0 bg-paper-100"></div>
-          <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.045),transparent_45%)]"></div>
-          <div class="absolute inset-0 opacity-[0.35] [background-size:28px_28px] [background-image:linear-gradient(to_right,rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.05)_1px,transparent_1px)]"></div>
+          <div class="absolute inset-0 bg-paper-100 mq-playfield-pattern"></div>
+          <div class="absolute inset-0 bg-linear-to-b from-candy-pink/10 via-transparent to-candy-grape/10"></div>
         </div>
 
         <div class="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6 lg:gap-5 lg:px-8">
@@ -1458,7 +1457,7 @@
           </div>
 
           <div class="pointer-events-none absolute left-1/2 top-[5.25rem] z-20 -translate-x-1/2 rounded-full border border-paper-300/25 bg-paper-200/12 px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-ink/80 shadow-md backdrop-blur-md sm:top-[6.2rem]">
-            Scroll or +/- to zoom. Drag to pan.
+            Scroll or +/- to zoom. Drag to rotate.
           </div>
 
           {#if roundStatus === 'result'}
@@ -1478,7 +1477,7 @@
                       {/if}
                     </p>
                   </div>
-                  <button class="mq-btn-primary bg-paper-200 text-ink hover:bg-paper-100 border-none shadow-md" onclick={lastDistanceKm! <= locationRound.allowedRadiusKm ? nextRound : exitToModes}>
+                  <button class="mq-btn-secondary border-pop text-pop" onclick={lastDistanceKm! <= locationRound.allowedRadiusKm ? nextRound : exitToModes}>
                     {lastDistanceKm! <= locationRound.allowedRadiusKm ? 'Next Round' : 'Try Again'}
                   </button>
                 </div>

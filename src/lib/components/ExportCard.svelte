@@ -34,7 +34,7 @@
 <div
   role="button"
   tabindex={entry.status === 'ready' ? 0 : -1}
-  class="mq-panel mq-card-enter group flex flex-col gap-6 bg-paper-200/72 p-6 text-left transition-all duration-300 hover:border-clay-500/30 hover:shadow-float {entry.status === 'ready' ? 'cursor-pointer' : 'opacity-60'}"
+  class="mq-panel mq-card-enter group flex flex-col gap-6 bg-paper-200/72 p-6 text-left transition-all duration-300 hover:-rotate-[0.25deg] hover:border-candy-pink/45 hover:shadow-float {entry.status === 'ready' ? 'cursor-pointer' : 'opacity-60'}"
   onclick={() => entry.status === 'ready' && onSelect(entry)}
   onkeydown={(e) => entry.status === 'ready' && (e.key === 'Enter' || e.key === ' ') && onSelect(entry)}
 >
@@ -75,10 +75,10 @@
 
   <div class="mt-auto flex w-full items-center justify-between gap-3">
     <div
-      class="flex h-10 flex-1 items-center justify-center rounded-full bg-linear-to-r from-clay-500 to-clay-600 text-sm font-bold text-ink shadow-md shadow-clay-500/20 transition-all group-hover:-translate-y-0.5 group-hover:shadow-lg group-hover:shadow-clay-500/30 active:translate-y-0"
+      class="flex h-11 flex-1 items-center justify-center rounded-full border-[3px] border-pop bg-linear-to-r from-candy-pink to-candy-lemon font-display text-sm font-bold text-pop shadow-[4px_4px_0_var(--color-pop)] transition-all group-hover:-translate-y-0.5 group-hover:shadow-[6px_6px_0_var(--color-pop)] active:translate-y-0"
       style={entry.status !== 'ready' ? 'opacity: 0.5; pointer-events: none;' : ''}
     >
-      Play
+      Play now
     </div>
 
     <div class="flex gap-1.5" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="presentation">

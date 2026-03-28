@@ -79,7 +79,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+  class="fixed inset-0 z-[100] flex items-center justify-center bg-linear-to-br from-pop/95 via-paper-100/92 to-pop/90 backdrop-blur-md"
   transition:fade={{ duration: 200 }}
   onclick={onClose}
 >
@@ -100,14 +100,14 @@
   </div>
 
   <button
-    class="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-paper-200/14 text-ink hover:bg-paper-200/20 transition-all hover:scale-110 active:scale-95"
+    class="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-pop bg-candy-pink/30 text-ink shadow-[4px_4px_0_var(--color-pop)] transition-all hover:scale-110 hover:bg-candy-mint/30 active:scale-95"
     onclick={onClose}
     aria-label="Close"
   >
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
   </button>
   
-  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-paper-200/14 backdrop-blur-xl px-8 py-3.5 rounded-full border border-paper-300/25 text-ink/90 text-sm font-medium shadow-2xl">
+  <div class="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-6 rounded-full border-[3px] border-pop bg-linear-to-r from-candy-pink/25 via-candy-mint/20 to-candy-lemon/25 px-8 py-3.5 font-display text-sm font-bold text-ink shadow-[6px_6px_0_var(--color-pop)] backdrop-blur-xl">
     <div class="flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
       <span>Scroll to Zoom</span>
@@ -120,7 +120,7 @@
     <div class="h-4 w-[1px] bg-paper-200/20"></div>
     <button 
       onclick={reset} 
-      class="hover:text-ink hover:underline transition-colors decoration-clay-400 underline-offset-4"
+      class="text-candy-pink transition-colors hover:text-candy-mint hover:underline hover:decoration-candy-mint underline-offset-4"
     >
       Reset View
     </button>

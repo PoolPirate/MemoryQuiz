@@ -31,9 +31,11 @@
   }
 </script>
 
-<figure class="mq-panel group relative grid gap-3 p-3.5 sm:p-4">
+<figure
+  class="mq-panel group relative grid gap-3 p-3.5 sm:p-4 [box-shadow:8px_8px_0_color-mix(in_srgb,var(--color-pop)_88%,transparent),0_0_0_3px_color-mix(in_srgb,var(--color-candy-pink)_35%,transparent),0_0_0_6px_color-mix(in_srgb,var(--color-candy-mint)_28%,transparent)]"
+>
   <div 
-    class="relative overflow-hidden rounded-[20px] cursor-pointer"
+    class="relative cursor-pointer overflow-hidden rounded-[1.35rem] ring-[3px] ring-candy-lemon/25"
     onclick={toggleOverlay}
     onkeydown={(e) => e.key === 'Enter' && toggleOverlay(e as any)}
     role="button"
