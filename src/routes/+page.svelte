@@ -1391,6 +1391,7 @@
           <WorldMap
             guess={lastGuess}
             answer={roundStatus === 'result' ? locationRound.answer : null}
+            allowedRadiusKm={locationRound.allowedRadiusKm}
             disabled={roundStatus === 'result' || deletingMediaIds.length > 0}
             onSelect={handleLocationGuess}
             onConfirm={submitLocationGuess}

@@ -1,4 +1,4 @@
-export const LOCATION_RADII_KM = [1000, 750, 500, 250, 100, 50, 40, 30, 20, 10, 9, 8, 7, 6, 5, 4, 3];
+export const LOCATION_RADII_KM = [1000, 750, 500, 250, 100, 50, 40, 30, 20, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 
 export function getAllowedRadiusKm(streak: number): number {
   return LOCATION_RADII_KM[Math.min(streak, LOCATION_RADII_KM.length - 1)];
