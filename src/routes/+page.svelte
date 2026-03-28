@@ -81,7 +81,6 @@
   let appOverview: AppOverview | null = null;
   let loading = true;
   let errorMessage = '';
-  let noticeMessage = '';
 
   let view: 'menu' | 'modes' | 'playing' = 'menu';
   let activeExport: ExportOverview | null = null;
@@ -120,7 +119,6 @@
 
   let showSetupModal = false;
   let setupStep: SetupStep = 'guide';
-  let setupErrorMessage = '';
   let setupLoadingMessage = 'Inspecting the selected zip file...';
   let importPreview: ImportPreview | null = null;
   let importResult: ImportZipResult | null = null;
@@ -187,6 +185,10 @@
   }
   $: if (renamingExport) {
     void focusTextInput(renameInput);
+  }
+
+  function dismissErrorModal() {
+    errorMessage = '';
   }
 
   function getModeTitle(mode: GameMode | null): string {
@@ -425,9 +427,6 @@
 
   function handleLibraryNameInput(event: Event) {
     libraryName = (event.currentTarget as HTMLInputElement).value;
-    if (setupErrorMessage && setupStep === 'name') {
-      setupErrorMessage = '';
-    }
   }
 
   onMount(() => {
@@ -437,7 +436,7 @@
         isImporting = false;
       } else if (event.stage === 'error') {
         isImporting = false;
-        setupErrorMessage = event.message;
+        errorMessage = event.message;
       }
     });
 
@@ -473,7 +472,7 @@
   }
 
   function openSetupModal() {
-    setupErrorMessage = '';
+    errorMessage = '';
     setupLoadingMessage = 'Inspecting the selected zip file...';
     importPreview = null;
     importResult = null;
@@ -492,7 +491,7 @@
     }
 
     showSetupModal = false;
-    setupErrorMessage = '';
+    errorMessage = '';
     importPreview = null;
     importResult = null;
     importProgress = null;
@@ -502,7 +501,7 @@
   }
 
   async function chooseImportFile() {
-    setupErrorMessage = '';
+    errorMessage = '';
     const fallbackStep = importPreview ? 'review' : 'name';
 
     try {
@@ -521,7 +520,7 @@
       allowDuplicateImport = false;
       setupStep = 'review';
     } catch (error) {
-      setupErrorMessage = (error as Error).message;
+      errorMessage = (error as Error).message;
       setupStep = fallbackStep;
     } finally {
       isPreparingImport = false;
@@ -530,24 +529,22 @@
 
   async function startImport() {
     if (!importPreview) {
-      setupErrorMessage = 'Choose a Google Photos Takeout zip first.';
+      errorMessage = 'Choose a Google Photos Takeout zip first.';
       return;
     }
 
     if (!libraryName.trim()) {
-      setupErrorMessage = 'Enter a library name before you create it.';
+      errorMessage = 'Enter a library name before you create it.';
       setupStep = 'name';
       return;
     }
 
     if (importPreview.duplicateOf && !allowDuplicateImport) {
-      setupErrorMessage = 'This zip already exists as a library. Turn on duplicate import if you still want a separate copy.';
+      errorMessage = 'This zip already exists as a library. Turn on duplicate import if you still want a separate copy.';
       return;
     }
 
-    setupErrorMessage = '';
     errorMessage = '';
-    noticeMessage = '';
     isImporting = true;
     setupStep = 'importing';
     importResult = null;
@@ -563,7 +560,7 @@
       view = 'modes';
       setupStep = 'result';
     } catch (error) {
-      setupErrorMessage = (error as Error).message;
+      errorMessage = (error as Error).message;
       setupStep = 'review';
       isImporting = false;
     }
@@ -579,7 +576,6 @@
     }
 
     errorMessage = '';
-    noticeMessage = '';
     await getApi().selectExport(entry.id);
     activeExport = entry;
     view = 'modes';
@@ -589,7 +585,6 @@
     if (!activeExport) return;
     await waitForPendingSaves();
     errorMessage = '';
-    noticeMessage = '';
     gameMode = mode;
     locationRound = null;
     olderNewerRound = null;
@@ -678,8 +673,6 @@
   async function submitLocationGuess() {
     if (!locationRound || !lastGuess || roundStatus !== 'guessing' || deletingMediaIds.length > 0) return;
 
-    noticeMessage = '';
-
     lastDistanceKm = haversineKm(lastGuess, locationRound.answer);
     roundStatus = 'result';
 
@@ -695,8 +688,6 @@
 
   async function handleOlderNewerGuess(side: 'left' | 'right') {
     if (!olderNewerRound || roundStatus !== 'guessing' || deletingMediaIds.length > 0) return;
-
-    noticeMessage = '';
 
     lastOlderNewerGuess = side;
     roundStatus = 'result';
@@ -739,7 +730,6 @@
       return;
     }
 
-    noticeMessage = '';
     selectedTimelineMediaId = timelineSortRound.newlyAddedId;
     roundStatus = 'result';
     const won = isTimelineOrderCorrect(timelineSortRound, timelinePlacements);
@@ -807,14 +797,12 @@
     }
 
     errorMessage = '';
-    noticeMessage = '';
     deletingMediaIds = [media.id];
 
     try {
       await getApi().deleteMedia(activeExport.id, media.id);
       activeExport = await getApi().getModeOverview(activeExport.id);
       if (deletingAfterLoss) {
-        noticeMessage = `${media.filename} was removed from the library.`;
         exitToModes();
       } else {
         if (gameMode === 'timeline-sort') {
@@ -823,7 +811,6 @@
           selectedTimelineMediaId = null;
           timelineStatusMap = {};
         }
-        noticeMessage = `${media.filename} was removed. Round skipped and streak unchanged.`;
         await nextRound();
       }
     } catch (error) {
@@ -982,7 +969,6 @@
     const name = renameValue.trim();
 
     errorMessage = '';
-    noticeMessage = '';
     renamingExport = null;
 
     try {
@@ -991,7 +977,6 @@
       if (activeExport?.id === updated.id) {
         activeExport = { ...activeExport, name: updated.name };
       }
-      noticeMessage = `Renamed library to ${name}.`;
     } catch (error) {
       errorMessage = (error as Error).message;
     }
@@ -1003,18 +988,21 @@
     }
 
     errorMessage = '';
-    noticeMessage = '';
 
     try {
       await getApi().deleteExport(entry.id);
       await refreshOverview();
-      noticeMessage = `${entry.name} was deleted.`;
     } catch (error) {
       errorMessage = (error as Error).message;
     }
   }
 
   function handleWindowKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' && errorMessage) {
+      dismissErrorModal();
+      return;
+    }
+
     if (event.key === 'Escape' && showSetupModal && !isImporting) {
       closeSetupModal();
     }
@@ -1041,18 +1029,6 @@
           Pick a library and play silly memory games with your own photos. Imports come from a Google Photos Takeout zip.
         </p>
       </header>
-
-      {#if errorMessage}
-        <div class="mx-6 lg:mx-8">
-          <div class={`${flashBaseClass} border-danger-500/15 bg-paper-200/88 text-danger-500`}>{errorMessage}</div>
-        </div>
-      {/if}
-
-      {#if noticeMessage}
-        <div class="mx-6 lg:mx-8">
-          <div class={`${flashBaseClass} border-moss-700/15 bg-paper-200/88 text-moss-700`}>{noticeMessage}</div>
-        </div>
-      {/if}
 
       {#if loading}
         <section class="grid place-items-center py-20 text-center text-base text-muted">
@@ -1103,14 +1079,6 @@
             <p class="mt-1 text-sm text-muted">Choose a mode to start playing</p>
           </div>
         </header>
-
-        {#if errorMessage}
-          <div class={`${flashBaseClass} border-danger-500/15 bg-paper-200/88 text-danger-500`}>{errorMessage}</div>
-        {/if}
-
-        {#if noticeMessage}
-          <div class={`${flashBaseClass} border-moss-700/15 bg-paper-200/88 text-moss-700`}>{noticeMessage}</div>
-        {/if}
 
         <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           <ModeCard
@@ -1187,14 +1155,6 @@
             </div>
           </header>
 
-          {#if errorMessage}
-            <div class="{flashBaseClass} border-danger-500/15 bg-paper-200/90 text-danger-600">{errorMessage}</div>
-          {/if}
-
-          {#if noticeMessage}
-            <div class="{flashBaseClass} border-moss-600/15 bg-paper-200/90 text-moss-700">{noticeMessage}</div>
-          {/if}
-
           <div class="rounded-2xl border border-paper-300/70 bg-paper-200/85 px-4 py-3 text-center shadow-[0_10px_30px_rgba(34,34,34,0.08)] backdrop-blur-sm sm:px-5 sm:py-4">
             {#if roundStatus === 'guessing'}
               <p class="text-sm text-muted sm:text-base">Select one image. You can open full screen before choosing.</p>
@@ -1214,23 +1174,19 @@
               class="group relative flex flex-col overflow-hidden rounded-2xl border bg-paper-200/90 shadow-[0_14px_34px_rgba(34,34,34,0.08)] transition-all duration-200 {roundStatus === 'guessing' ? 'border-paper-300/80 hover:-translate-y-0.5 hover:border-clay-500/40' : leftIsNewer ? 'border-moss-500/50 bg-moss-50/80' : 'border-paper-300/80'}"
             >
               <div class="relative aspect-[4/3] overflow-hidden bg-paper-100">
-                <img
-                  class="h-full w-full object-cover transition-transform duration-300 {roundStatus === 'guessing' ? 'group-hover:scale-[1.015]' : ''}"
-                  src={olderNewerRound.left.imageUrl}
-                  alt={olderNewerRound.left.filename}
-                  loading="eager"
-                />
-                <div class="absolute left-3 top-3 z-10">
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-paper-300/80 bg-paper-200/90 text-ink shadow-sm backdrop-blur-sm transition-colors hover:bg-paper-100"
-                    aria-label="View full screen"
-                    title="View full screen"
-                    onclick={() => openOlderNewerFullscreen(olderNewerRound!.left)}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  class="absolute inset-0 flex h-full w-full cursor-pointer border-0 bg-transparent p-0"
+                  aria-label="View full screen"
+                  onclick={() => openOlderNewerFullscreen(olderNewerRound!.left)}
+                >
+                  <img
+                    class="pointer-events-none h-full w-full object-cover transition-transform duration-300 {roundStatus === 'guessing' ? 'group-hover:scale-[1.015]' : ''}"
+                    src={olderNewerRound.left.imageUrl}
+                    alt={olderNewerRound.left.filename}
+                    loading="eager"
+                  />
+                </button>
                 {#if canDeleteCurrentRoundMedia()}
                   <div class="absolute right-3 top-3 z-10">
                     <button
@@ -1270,23 +1226,19 @@
               class="group relative flex flex-col overflow-hidden rounded-2xl border bg-paper-200/90 shadow-[0_14px_34px_rgba(34,34,34,0.08)] transition-all duration-200 {roundStatus === 'guessing' ? 'border-paper-300/80 hover:-translate-y-0.5 hover:border-clay-500/40' : rightIsNewer ? 'border-moss-500/50 bg-moss-50/80' : 'border-paper-300/80'}"
             >
               <div class="relative aspect-[4/3] overflow-hidden bg-paper-100">
-                <img
-                  class="h-full w-full object-cover transition-transform duration-300 {roundStatus === 'guessing' ? 'group-hover:scale-[1.015]' : ''}"
-                  src={olderNewerRound.right.imageUrl}
-                  alt={olderNewerRound.right.filename}
-                  loading="eager"
-                />
-                <div class="absolute left-3 top-3 z-10">
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-paper-300/80 bg-paper-200/90 text-ink shadow-sm backdrop-blur-sm transition-colors hover:bg-paper-100"
-                    aria-label="View full screen"
-                    title="View full screen"
-                    onclick={() => openOlderNewerFullscreen(olderNewerRound!.right)}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  class="absolute inset-0 flex h-full w-full cursor-pointer border-0 bg-transparent p-0"
+                  aria-label="View full screen"
+                  onclick={() => openOlderNewerFullscreen(olderNewerRound!.right)}
+                >
+                  <img
+                    class="pointer-events-none h-full w-full object-cover transition-transform duration-300 {roundStatus === 'guessing' ? 'group-hover:scale-[1.015]' : ''}"
+                    src={olderNewerRound.right.imageUrl}
+                    alt={olderNewerRound.right.filename}
+                    loading="eager"
+                  />
+                </button>
                 {#if canDeleteCurrentRoundMedia()}
                   <div class="absolute right-3 top-3 z-10">
                     <button
@@ -1502,17 +1454,6 @@
             </button>
           {/if}
 
-          {#if errorMessage}
-            <div class="absolute top-24 left-1/2 -translate-x-1/2 z-20 w-[min(calc(100%-2.5rem),480px)]">
-              <div class={`${flashBaseClass} border-danger-500/15 bg-paper-200/88 text-danger-500 backdrop-blur-md`}>{errorMessage}</div>
-            </div>
-          {/if}
-
-          {#if noticeMessage}
-            <div class="absolute top-24 left-1/2 -translate-x-1/2 z-20 w-[min(calc(100%-2.5rem),480px)]">
-              <div class={`${flashBaseClass} border-moss-700/15 bg-paper-200/88 text-moss-700 backdrop-blur-md`}>{noticeMessage}</div>
-            </div>
-          {/if}
         </div>
       {:else}
         <div class="flex flex-col gap-6 px-6 lg:px-8">
@@ -1532,14 +1473,6 @@
               <span class="font-display text-2xl leading-none">{streak}</span>
             </div>
           </header>
-
-          {#if errorMessage}
-            <div class={`${flashBaseClass} border-danger-500/15 bg-paper-200/88 text-danger-500`}>{errorMessage}</div>
-          {/if}
-
-          {#if noticeMessage}
-            <div class={`${flashBaseClass} border-moss-700/15 bg-paper-200/88 text-moss-700`}>{noticeMessage}</div>
-          {/if}
 
         {#if gameMode === 'timeline-sort' && timelineSortRound}
           <div class="mx-auto flex w-full max-w-6xl flex-col gap-5 pb-8">
@@ -1725,12 +1658,6 @@
                   Pick a friendly name now so this library is easy to find later. You can still rename it after the import.
                 </div>
 
-                {#if setupErrorMessage}
-                  <div class="flex gap-3 rounded-2xl bg-danger-500/10 p-4 text-sm text-danger-600">
-                    <svg class="mt-0.5 shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <p>{setupErrorMessage}</p>
-                  </div>
-                {/if}
               </div>
             {:else if setupStep === 'preparing'}
               <div class="flex h-full flex-col items-center justify-center gap-6 py-10 text-center">
@@ -1783,12 +1710,6 @@
                   {/if}
                 {/if}
 
-                {#if setupErrorMessage}
-                  <div class="flex gap-3 rounded-2xl bg-danger-500/10 p-4 text-sm text-danger-600">
-                    <svg class="mt-0.5 shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <p>{setupErrorMessage}</p>
-                  </div>
-                {/if}
               </div>
             {:else if setupStep === 'importing'}
               <div class="flex h-full flex-col items-center justify-center gap-8 py-10 text-center">
@@ -1921,6 +1842,40 @@
                 </button>
               </div>
             {/if}
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if errorMessage}
+      <div class="fixed inset-0 z-30 grid place-items-center bg-ink/60 p-4 backdrop-blur-md sm:p-6">
+        <div
+          class="mq-panel mq-modal-panel flex w-full max-w-[520px] flex-col overflow-hidden p-0 shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="error-modal-title"
+        >
+          <div class="flex items-center justify-between border-b border-paper-300/50 bg-paper-50/30 px-6 py-5 sm:px-8">
+            <div class="grid gap-1">
+              <span class="text-xs font-bold uppercase tracking-widest text-danger-500">Something went wrong</span>
+              <h2 id="error-modal-title" class="font-display text-2xl text-ink">Error</h2>
+            </div>
+            <button class="text-muted hover:text-ink" onclick={dismissErrorModal} aria-label="Close error" title="Close error">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+
+          <div class="px-6 py-8 sm:px-8">
+            <div class="flex gap-4 rounded-[24px] border border-danger-400/20 bg-danger-500/8 p-5 text-danger-700">
+              <div class="mt-0.5 shrink-0 text-danger-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <p class="text-sm leading-relaxed">{errorMessage}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end border-t border-paper-300/50 bg-paper-50/35 px-6 py-5 sm:px-8">
+            <button class="mq-btn-primary" onclick={dismissErrorModal}>OK</button>
           </div>
         </div>
       </div>
