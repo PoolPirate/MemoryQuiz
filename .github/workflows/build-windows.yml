@@ -1,15 +1,23 @@
-name: Build Windows App
+name: Release Windows App
 
 on:
   push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build-windows:
+  release-windows:
     runs-on: windows-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -17,27 +25,89 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Read package version
+        id: version
+        shell: bash
+        run: |
+          version="$(node -p \"require('./package.json').version\")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch tags
+        shell: bash
+        run: git fetch --force --tags origin
+
+      - name: Check whether release tag already exists
+        id: tag_check
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          if git show-ref --verify --quiet "refs/tags/$version"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $version already exists. Skipping build and release."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add skip summary
+        if: steps.tag_check.outputs.exists == 'true'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          {
+            echo "## Release skipped"
+            echo
+            echo "Tag \\`$version\\` already exists, so no build or release was created."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Install dependencies
+        if: steps.tag_check.outputs.exists != 'true'
         run: npm ci
 
       - name: Typecheck
+        if: steps.tag_check.outputs.exists != 'true'
         run: npm run check
 
       - name: Package MemoryQuiz for Windows
+        if: steps.tag_check.outputs.exists != 'true'
         run: npm run package:win
 
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: MemoryQuiz-windows-${{ github.sha }}
-          path: |
-            release/*.exe
-            release/latest*.yml
-            release/*.blockmap
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Add workflow summary
+      - name: Ensure Windows executables exist
+        if: steps.tag_check.outputs.exists != 'true'
+        shell: bash
         run: |
-          echo "## Windows build ready" >> $env:GITHUB_STEP_SUMMARY
-          echo "Download the artifact named \\`MemoryQuiz-windows-${{ github.sha }}\\` from this workflow run's Artifacts section." >> $env:GITHUB_STEP_SUMMARY
+          shopt -s nullglob
+          files=(release/*.exe)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No .exe files found in release/."
+            exit 1
+          fi
+
+      - name: Create version tag
+        if: steps.tag_check.outputs.exists != 'true'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' tag "$version"
+          git push origin "refs/tags/$version"
+
+      - name: Create GitHub release and upload executables
+        if: steps.tag_check.outputs.exists != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          shopt -s nullglob
+          files=(release/*.exe)
+          gh release create "$version" "${files[@]}" --title "MemoryQuiz $version" --notes "Windows build for MemoryQuiz $version."
+
+      - name: Add release summary
+        if: steps.tag_check.outputs.exists != 'true'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          {
+            echo "## Release created"
+            echo
+            echo "Created tag \\`$version\\` and published the Windows executables to the GitHub release."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -49,7 +49,7 @@ Start with one photo locked in time. Each round adds a new photo to place on the
 
 ### Installation
 
-1. Download the latest Windows build from the [GitHub Actions artifacts](.github/workflows/build-windows.yml)
+1. Download the latest Windows build from the [latest GitHub release](https://github.com/PoolPirate/MemoryQuiz/releases/latest)
 2. Run the installer or portable executable
 3. Launch MemoryQuiz!
 
