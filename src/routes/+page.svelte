@@ -1099,17 +1099,7 @@
             Back to Libraries
           </button>
           <div class="text-right">
-            <div class="flex items-center justify-end gap-3">
-              <h2 class="font-display text-3xl text-ink">{activeExport.name}</h2>
-              <button
-                title="Rename library"
-                aria-label="Rename library"
-                class="flex h-8 w-8 items-center justify-center rounded-full border border-paper-300/60 bg-paper-200/82 text-muted hover:border-clay-500/40 hover:text-clay-600 hover:shadow-sm"
-                onclick={() => handleRename(activeExport!)}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-              </button>
-            </div>
+            <h2 class="font-display text-3xl text-ink">{activeExport.name}</h2>
             <p class="mt-1 text-sm text-muted">Choose a mode to start playing</p>
           </div>
         </header>
@@ -1446,46 +1436,60 @@
             </div>
           </header>
 
-          <div class="absolute bottom-5 right-5 z-30 aspect-[4/3] w-[min(52vw,280px)] min-w-[170px] sm:w-[min(32vw,300px)] lg:w-[300px]">
-            <WorldMap
-              guess={lastGuess}
-              answer={roundStatus === 'result' ? locationRound.answer : null}
-              disabled={roundStatus === 'result' || deletingMediaIds.length > 0}
-              onSelect={handleLocationGuess}
-              onConfirm={submitLocationGuess}
-            />
-          </div>
-
-          <div class="pointer-events-none absolute left-1/2 top-[5.25rem] z-20 -translate-x-1/2 rounded-full border border-paper-300/25 bg-paper-200/12 px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-ink/80 shadow-md backdrop-blur-md sm:top-[6.2rem]">
-            Scroll or +/- to zoom. Drag to rotate.
-          </div>
+          <WorldMap
+            guess={lastGuess}
+            answer={roundStatus === 'result' ? locationRound.answer : null}
+            disabled={roundStatus === 'result' || deletingMediaIds.length > 0}
+            onSelect={handleLocationGuess}
+            onConfirm={submitLocationGuess}
+          />
 
           {#if roundStatus === 'result'}
-            <div class="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 w-[min(calc(100%-2.5rem),480px)]">
-              <div class={`${flashBaseClass} border-none shadow-2xl backdrop-blur-xl ${lastDistanceKm! <= locationRound.allowedRadiusKm ? 'bg-moss-700/90 text-ink' : 'bg-danger-600/90 text-ink'}`}>
-                <div class="flex items-center justify-between gap-4">
-                  <div>
-                    <h4 class="font-display text-xl">
-                      {lastDistanceKm! <= locationRound.allowedRadiusKm ? 'Great guess!' : 'Too far away!'}
-                    </h4>
-                    <p class="text-sm opacity-90">
-                      You were <strong>{formatLocationDistance(lastDistanceKm!)}</strong> away.
-                      {#if lastDistanceKm! <= locationRound.allowedRadiusKm}
-                        The goal was {locationRound.allowedRadiusKm} km.
-                      {:else}
-                        Streak reset.
-                      {/if}
-                    </p>
-                  </div>
-                  <button class="mq-btn-secondary border-pop text-pop" onclick={lastDistanceKm! <= locationRound.allowedRadiusKm ? nextRound : exitToModes}>
-                    {lastDistanceKm! <= locationRound.allowedRadiusKm ? 'Next Round' : 'Try Again'}
-                  </button>
+            {@const locationWon = lastDistanceKm! <= locationRound.allowedRadiusKm}
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 z-40 p-3 sm:p-4">
+              <div
+                class={`result-strip pointer-events-auto mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border px-4 py-3 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:gap-4 sm:rounded-3xl sm:px-5 sm:py-3.5 ${
+                  locationWon
+                    ? 'border-moss-400/20 bg-moss-50/88'
+                    : 'border-danger-400/20 bg-danger-50/88'
+                }`}
+              >
+                <div class={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full sm:h-10 sm:w-10 ${locationWon ? 'bg-moss-400/15' : 'bg-danger-500/15'}`}>
+                  {#if locationWon}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-moss-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-danger-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  {/if}
                 </div>
+
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-display text-base leading-tight text-ink sm:text-lg">
+                    {locationWon ? 'Nice one!' : 'Too far'}
+                    <span class="font-body text-sm text-ink/40 sm:text-base">&middot;</span>
+                    <span class={`font-body text-sm sm:text-base ${locationWon ? 'text-moss-400' : 'text-danger-400'}`}>
+                      {formatLocationDistance(lastDistanceKm!)}
+                    </span>
+                  </p>
+                  <p class="truncate text-xs text-ink/50 sm:text-sm">
+                    {#if locationWon}
+                      Within {locationRound.allowedRadiusKm} km radius &mdash; streak continues
+                    {:else}
+                      Needed &lt; {locationRound.allowedRadiusKm} km &mdash; streak ends
+                    {/if}
+                  </p>
+                </div>
+
+                <button
+                  class="mq-btn-primary shrink-0"
+                  onclick={locationWon ? nextRound : exitToModes}
+                >
+                  {locationWon ? 'Continue' : 'Exit'}
+                </button>
               </div>
             </div>
           {/if}
           
-          {#if canDeleteCurrentRoundMedia()}
+          {#if canDeleteCurrentRoundMedia() && roundStatus === 'guessing'}
             <button
               type="button"
               class="absolute left-5 bottom-5 z-20 inline-flex h-12 w-12 items-center justify-center rounded-full border border-paper-300/25 bg-paper-200/14 text-ink shadow-lg backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-danger-500/80 hover:border-danger-400 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-danger-500/35 disabled:cursor-not-allowed disabled:opacity-45"
@@ -1538,10 +1542,48 @@
           {/if}
 
         {#if gameMode === 'timeline-sort' && timelineSortRound}
-          <div class="flex flex-col gap-6" style="margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); width: 100vw; padding: 0 max(1.5rem, calc((100vw - 1280px) / 2)); overflow-x: hidden;">
-            <div class="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start max-w-7xl mx-auto w-full">
+          <div class="mx-auto flex w-full max-w-6xl flex-col gap-5 pb-8">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p class="font-display text-lg text-ink sm:text-xl">
+                  {#if roundStatus === 'guessing'}
+                    Slide the new photo into chronological order
+                  {:else if lastTimelineOrderCorrect}
+                    That slot was correct
+                  {:else}
+                    Not quite—compare the true date
+                  {/if}
+                </p>
+                <p class="mt-1 text-sm text-muted">
+                  <strong class="text-ink/90">{formatTimelineDate(timelineSortRound.rangeStartTs)}</strong>
+                  <span class="text-muted/50"> → </span>
+                  <strong class="text-ink/90">{formatTimelineDate(timelineSortRound.rangeEndTs)}</strong>
+                  <span class="mx-2 text-muted/30">|</span>
+                  <span class="text-moss-700">{timelineLockedIds.length} locked</span>
+                  <span class="text-muted/30">,</span>
+                  <span class="text-clay-300"> {timelineSortRound.items.filter((i) => !timelineLockedIds.includes(i.id)).length} to place</span>
+                </p>
+              </div>
+            </div>
+
+            <TimelineSorter
+              items={timelineSortRound.items}
+              positions={timelinePlacements}
+              selectedId={selectedTimelineMediaId}
+              newlyAddedId={timelineSortRound.newlyAddedId}
+              lockedIds={timelineLockedIds}
+              rangeStartTs={timelineSortRound.rangeStartTs}
+              rangeEndTs={timelineSortRound.rangeEndTs}
+              disabled={roundStatus === 'result' || deletingMediaIds.length > 0}
+              revealAnswer={roundStatus === 'result'}
+              statusMap={timelineStatusMap}
+              onMove={handleTimelinePlacement}
+              onSelect={handleTimelineSelect}
+            />
+
+            <div class="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,360px)] lg:items-start">
               {#if selectedTimelineMedia}
-                <div class="h-full max-h-[50vh]">
+                <div class="min-w-0">
                   {#key selectedTimelineMedia.id}
                     <PhotoFrame
                       src={selectedTimelineMedia.imageUrl}
@@ -1558,43 +1600,37 @@
                 </div>
               {/if}
 
-              <aside class="grid gap-4 w-full">
-                <div class="mq-panel grid gap-3 p-5">
-                  <p class="text-xs font-bold uppercase tracking-[0.24em] text-clay-600/75">This Round</p>
-                  <h3 class="font-display text-2xl text-ink">Full Library Timeline</h3>
+              <aside class="grid gap-5">
+                <div class="grid gap-2">
+                  <p class="text-xs font-bold uppercase tracking-[0.24em] text-clay-600/75">Placement readout</p>
                   <p class="text-sm leading-relaxed text-muted">
-                    Keep the order correct. Every successful guess snaps the new photo to its true date and locks it below the timeline.
-                  </p>
-                  <p class="text-sm text-muted">
-                    Range: <strong>{formatTimelineDate(timelineSortRound.rangeStartTs)}</strong> to
-                    <strong>{formatTimelineDate(timelineSortRound.rangeEndTs)}</strong>
-                  </p>
-                </div>
-
-                <div class="mq-panel grid gap-3 p-5">
-                  <p class="text-xs font-bold uppercase tracking-[0.24em] text-clay-600/75">Selected Photo</p>
-                  <p class="text-sm text-muted">
                     {getTimelinePlacementSummary(selectedTimelineMedia)}
                   </p>
                   {#if roundStatus === 'result' && selectedTimelineMedia}
                     <p class="text-sm text-muted">
-                      Actual date: <strong>{formatTimelineDetail(selectedTimelineMedia.captureTs)}</strong>
+                      Actual capture: <strong class="font-display text-ink">{formatTimelineDetail(selectedTimelineMedia.captureTs)}</strong>
                     </p>
                   {/if}
                 </div>
 
                 {#if roundStatus === 'guessing'}
-                  <button class="mq-btn-primary w-full justify-center" onclick={submitTimelineGuess} disabled={deletingMediaIds.length > 0}>
-                    Check Order
+                  <button
+                    class="mq-btn-primary w-full justify-center py-3 text-base"
+                    onclick={submitTimelineGuess}
+                    disabled={deletingMediaIds.length > 0}
+                  >
+                    Check order
                   </button>
                 {:else}
-                  <div class={`${flashBaseClass} ${lastTimelineOrderCorrect ? 'border-moss-700/15 bg-moss-700/5 text-moss-800' : 'border-danger-500/15 bg-danger-500/5 text-danger-700'}`}>
-                    <div class="grid gap-3">
-                      <div>
-                        <h4 class="font-display text-xl">
-                          {lastTimelineOrderCorrect ? 'Order locked in!' : 'Out of order'}
+                  <div
+                    class={`${flashBaseClass} ${lastTimelineOrderCorrect ? 'border-moss-700/20 bg-moss-700/8 text-moss-800' : 'border-danger-500/20 bg-danger-500/8 text-danger-700'}`}
+                  >
+                    <div class="grid gap-4">
+                      <div class="grid gap-2">
+                        <h4 class="font-display text-2xl">
+                          {lastTimelineOrderCorrect ? 'Order locked in' : 'Out of order'}
                         </h4>
-                        <p class="text-sm opacity-80">
+                        <p class="text-sm opacity-90">
                           {#if lastTimelineOrderCorrect}
                             The new photo snaps to <strong>{formatTimelineDate(getTimelineRoundMedia(timelineSortRound.newlyAddedId)?.captureTs ?? timelineSortRound.rangeStartTs)}</strong> and joins the locked stack.
                           {:else}
@@ -1602,30 +1638,13 @@
                           {/if}
                         </p>
                       </div>
-                      <button class="mq-btn-primary justify-center" onclick={lastTimelineOrderCorrect ? nextRound : exitToModes}>
-                        {lastTimelineOrderCorrect ? 'Add Another Photo' : 'Try Again'}
+                      <button class="mq-btn-primary justify-center py-3" onclick={lastTimelineOrderCorrect ? nextRound : exitToModes}>
+                        {lastTimelineOrderCorrect ? 'Add another photo' : 'Try again'}
                       </button>
                     </div>
                   </div>
                 {/if}
               </aside>
-            </div>
-            
-            <div class="w-full pb-8">
-              <TimelineSorter
-                items={timelineSortRound.items}
-                positions={timelinePlacements}
-                selectedId={selectedTimelineMediaId}
-                newlyAddedId={timelineSortRound.newlyAddedId}
-                lockedIds={timelineLockedIds}
-                rangeStartTs={timelineSortRound.rangeStartTs}
-                rangeEndTs={timelineSortRound.rangeEndTs}
-                disabled={roundStatus === 'result' || deletingMediaIds.length > 0}
-                revealAnswer={roundStatus === 'result'}
-                statusMap={timelineStatusMap}
-                onMove={handleTimelinePlacement}
-                onSelect={handleTimelineSelect}
-              />
             </div>
           </div>
         {/if}

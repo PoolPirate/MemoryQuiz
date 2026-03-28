@@ -111,75 +111,36 @@
     return index >= 0 ? index % 2 : 0;
   }
 
-  function getMarkerToneClass(mediaId: string): string {
+  function getMarkerShellClass(mediaId: string): string {
     const tone = statusMap[mediaId] ?? 'neutral';
     if (tone === 'correct') {
-      return 'border-moss-600/60 bg-paper-100/95 text-moss-900 shadow-[0_18px_32px_rgba(74,116,88,0.2)]';
+      return 'ring-1 ring-moss-400/70';
     }
     if (tone === 'incorrect') {
-      return 'border-danger-500/45 bg-paper-100/95 text-ink shadow-[0_18px_32px_rgba(182,72,72,0.18)]';
+      return 'ring-1 ring-danger-400/60';
     }
     if (mediaId === selectedId) {
-      return 'border-clay-500/80 bg-paper-100/95 text-ink shadow-[0_18px_32px_rgba(184,107,62,0.22)]';
+      return 'ring-1 ring-candy-lemon/80';
     }
     if (isLocked(mediaId)) {
-      return 'border-moss-300/75 bg-paper-100/95 text-ink shadow-[0_18px_32px_rgba(74,116,88,0.14)]';
+      return 'ring-1 ring-paper-300/50';
     }
-    return 'border-paper-300/80 bg-paper-100/95 text-ink shadow-[0_14px_28px_rgba(47,36,27,0.2)]';
+    return 'ring-1 ring-paper-300/40';
   }
 
-  function getMarkerStemClass(mediaId: string): string {
+  function getStatusDotClass(mediaId: string): string {
     const tone = statusMap[mediaId] ?? 'neutral';
-    if (tone === 'correct') {
-      return 'bg-moss-400 shadow-[0_0_16px_rgba(145,177,120,0.75)]';
-    }
-    if (tone === 'incorrect') {
-      return 'bg-danger-400 shadow-[0_0_16px_rgba(220,108,108,0.72)]';
-    }
-    if (mediaId === selectedId) {
-      return 'bg-sun-300 shadow-[0_0_18px_rgba(236,196,95,0.82)]';
-    }
-    if (isLocked(mediaId)) {
-      return 'bg-sun-300 shadow-[0_0_18px_rgba(236,196,95,0.82)]';
-    }
-    return 'bg-sun-300 shadow-[0_0_18px_rgba(236,196,95,0.82)]';
-  }
-
-  function getMarkerTipClass(mediaId: string): string {
-    const tone = statusMap[mediaId] ?? 'neutral';
-    if (tone === 'correct') {
-      return 'border-moss-600/60 bg-paper-100/95';
-    }
-    if (tone === 'incorrect') {
-      return 'border-danger-500/45 bg-paper-100/95';
-    }
-    if (mediaId === selectedId) {
-      return 'border-clay-500/80 bg-paper-100/95';
-    }
-    if (isLocked(mediaId)) {
-      return 'border-moss-300/75 bg-paper-100/95';
-    }
-    return 'border-paper-300/80 bg-paper-100/95';
-  }
-
-  function getMarkerCoreClass(mediaId: string): string {
-    const tone = statusMap[mediaId] ?? 'neutral';
-    if (tone === 'correct') {
-      return 'bg-moss-700';
-    }
-    if (tone === 'incorrect') {
-      return 'bg-danger-500';
-    }
-    if (isLocked(mediaId)) {
-      return 'bg-moss-700';
-    }
-    return mediaId === selectedId ? 'bg-clay-600' : 'bg-clay-500';
+    if (tone === 'correct') return 'bg-moss-400';
+    if (tone === 'incorrect') return 'bg-danger-400';
+    if (mediaId === selectedId) return 'bg-candy-lemon';
+    if (isLocked(mediaId)) return 'bg-moss-500';
+    return 'bg-clay-400';
   }
 
   function getCardStyle(mediaId: string): string {
     const position = clampTimelinePosition(positions[mediaId] ?? 0.5);
     const lane = getLane(mediaId);
-    const top = isLocked(mediaId) ? 124 + lane * 18 : 16;
+    const top = isLocked(mediaId) ? 122 + lane * 22 : 12 + lane * 10;
     return `left: ${position * 100}%; top: ${top}px;`;
   }
 
@@ -207,67 +168,74 @@
 
 <svelte:window onpointermove={handlePointerMove} onpointerup={handlePointerUp} onpointercancel={handlePointerUp} />
 
-<section class="mq-panel relative overflow-hidden px-4 pb-6 pt-8 sm:px-6">
-  <div class="pointer-events-none absolute inset-x-5 top-0 h-32 bg-linear-to-b from-candy-grape/25 to-transparent"></div>
+<section>
+  <div class="mb-3 flex flex-wrap items-end justify-between gap-3 px-1">
+    <p class="max-w-xl text-sm text-muted">
+      Drag the movable marker along the rail. Locked memories sit on their real dates below the line.
+    </p>
+    <p class="text-xs font-semibold text-muted/70">
+      <span class="text-moss-700">{items.length - getActiveCount()} fixed</span>
+      <span class="text-muted/40"> · </span>
+      <span class="text-clay-300">{getActiveCount()} draggable</span>
+    </p>
+  </div>
 
-  <div class="grid gap-3">
-    <div class="flex items-center justify-between gap-3 px-1">
-      <div>
-        <p class="font-display text-xs font-bold uppercase tracking-[0.24em] text-candy-mint">Timeline</p>
-        <p class="text-sm leading-6 text-muted">Drag the new photo marker above the line. Locked photos stay below on their true dates.</p>
+  <div class="relative">
+    <div
+      bind:this={trackElement}
+      class="relative mx-auto min-h-[300px] w-full"
+    >
+      <div class="pointer-events-none absolute inset-x-4 top-5 flex justify-between text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted/55 sm:inset-x-6">
+        <span>Earlier</span>
+        <span>Later</span>
       </div>
-      <div class="rounded-full border-[2px] border-candy-lemon/35 bg-paper-200/82 px-3 py-1.5 font-display text-xs font-bold text-candy-lemon">
-        {items.length - getActiveCount()} locked / {getActiveCount()} active
+
+      <div class="pointer-events-none absolute left-1/2 top-[72px] z-0 -translate-x-1/2 sm:top-[76px]">
+        <span class="rounded-full border border-sun-300/35 bg-sun-300/10 px-3 py-1 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-sun-900/90">
+          Place new photo here
+        </span>
       </div>
-    </div>
 
-    <div class="mq-timeline-track relative min-h-[320px] rounded-[1.75rem] border-[3px] border-ink/10 px-3 pb-5 pt-8 sm:px-4">
-      <div bind:this={trackElement} class="relative h-[260px]">
-        <div class="absolute inset-x-0 top-[120px] h-[3px] rounded-full bg-linear-to-r from-candy-pink via-candy-lemon to-candy-mint opacity-90"></div>
+      <div class="pointer-events-none absolute left-1/2 top-[214px] z-0 -translate-x-1/2 sm:top-[222px]">
+        <span class="rounded-full border border-moss-400/35 bg-moss-500/10 px-3 py-1 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-moss-700">
+          Locked timeline
+        </span>
+      </div>
 
-        <div class="absolute inset-x-0 top-[102px] grid grid-cols-6 gap-0">
-          {#each getTickTimestamps() as tickTs}
-            <div class="relative flex flex-col items-center gap-2">
-              <div class="absolute left-1/2 top-0 h-9 w-px -translate-x-1/2 bg-paper-300/90"></div>
-              <span class="pt-9 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-muted/70">{tickFormatter.format(new Date(tickTs))}</span>
-            </div>
-          {/each}
-        </div>
+      <div class="absolute inset-x-4 top-[118px] z-[1] h-[4px] rounded-full bg-linear-to-r from-candy-pink via-candy-lemon to-candy-mint opacity-95 shadow-[0_0_24px_rgba(255,110,180,0.35)] sm:inset-x-8 sm:top-[124px]"></div>
 
-        <div class="pointer-events-none absolute inset-x-0 top-[8px] flex justify-center">
-          <span class="rounded-full border border-sun-300/40 bg-sun-300/12 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-sun-800">
-            New photo above
-          </span>
-        </div>
+      <div class="absolute inset-x-2 top-[108px] z-[1] grid grid-cols-6 gap-0 sm:inset-x-6">
+        {#each getTickTimestamps() as tickTs}
+          <div class="flex flex-col items-center gap-1">
+            <div class="h-6 w-px bg-paper-300/80"></div>
+            <span class="text-center text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted/75">{tickFormatter.format(new Date(tickTs))}</span>
+          </div>
+        {/each}
+      </div>
 
-        <div class="pointer-events-none absolute inset-x-0 top-[206px] flex justify-center">
-          <span class="rounded-full border border-moss-300/40 bg-moss-300/12 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-moss-700">
-            Locked photos below
-          </span>
-        </div>
-
+      <div class="relative z-[2] h-[300px]">
         {#each items as item}
           {#if isLocked(item.id)}
             <button
               type="button"
-              class={`absolute ${item.id === selectedId ? 'z-20' : 'z-10'} -translate-x-1/2 select-none touch-none ${draggingId === item.id ? '' : 'transition-all duration-200'} cursor-default`}
+              class={`absolute ${item.id === selectedId ? 'z-30' : 'z-20'} w-[max-content] min-w-[7.5rem] max-w-[11rem] -translate-x-1/2 select-none touch-none ${draggingId === item.id ? '' : 'transition-[top,left] duration-200 ease-out'} cursor-default`}
               style={getCardStyle(item.id)}
               onclick={() => onSelect(item.id)}
               aria-pressed={item.id === selectedId}
               aria-label="Placed photo on the timeline"
             >
-              <div class={`flex flex-col items-center ${item.id === selectedId ? 'translate-y-[2px]' : ''}`}>
-                <div class={`grid h-4 w-4 place-items-center rotate-45 rounded-[4px] border-2 shadow-[0_10px_18px_rgba(47,36,27,0.18)] ${getMarkerTipClass(item.id)}`}>
-                  <span class={`block h-1.5 w-1.5 -rotate-45 rounded-full ${getMarkerCoreClass(item.id)}`}></span>
-                </div>
-                <div class={`h-8 w-[2px] rounded-full ${getMarkerStemClass(item.id)}`}></div>
-                <div class={`flex items-center gap-2 rounded-[18px] border px-2.5 py-2 text-left backdrop-blur-sm ${getMarkerToneClass(item.id)}`}>
-                  <div class="h-9 w-9 overflow-hidden rounded-[12px] border border-paper-300/70 bg-paper-100/90">
+              <div class={`flex flex-col items-center gap-1 ${item.id === selectedId ? 'translate-y-px' : ''}`}>
+                <div class={`h-2 w-2 rounded-full ${getStatusDotClass(item.id)} shadow-[0_0_12px_currentColor]`}></div>
+                <div class="h-7 w-px rounded-full bg-linear-to-b from-sun-300/90 to-moss-400/70"></div>
+                <div
+                  class={`flex w-full items-center gap-2 rounded-xl bg-paper-100/85 p-1.5 ${getMarkerShellClass(item.id)}`}
+                >
+                  <div class="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-paper-200/80">
                     <img class="h-full w-full object-cover" src={item.imageUrl} alt={item.filename} draggable="false" />
                   </div>
-                  <div class="grid min-w-[5.5rem] gap-0.5 leading-none">
-                    <span class="text-[0.52rem] font-bold uppercase tracking-[0.2em] text-moss-700/75">Locked</span>
-                    <span class="text-[0.72rem] font-semibold">{getPositionLabel(item)}</span>
+                  <div class="grid min-w-0 flex-1 gap-0.5 text-left leading-tight">
+                    <span class="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-moss-700/85">Locked</span>
+                    <span class="truncate text-[0.78rem] font-semibold text-ink">{getPositionLabel(item)}</span>
                   </div>
                 </div>
               </div>
@@ -275,27 +243,27 @@
           {:else}
             <button
               type="button"
-              class={`absolute z-20 -translate-x-1/2 touch-none ${disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
+              class={`absolute z-30 w-[max-content] min-w-[7.5rem] max-w-[11rem] -translate-x-1/2 touch-none ${disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${draggingId === item.id ? '' : 'transition-[top,left] duration-200 ease-out'}`}
               style={getCardStyle(item.id)}
               onclick={() => onSelect(item.id)}
               onpointerdown={(event) => handlePointerDown(event, item.id)}
               aria-pressed={item.id === selectedId}
               aria-label="Place photo on the timeline"
             >
-              <div class={`flex flex-col items-center ${item.id === selectedId ? 'translate-y-[-2px]' : ''}`}>
-                <div class={`flex items-center gap-2 rounded-[18px] border px-2.5 py-2 backdrop-blur-sm ${getMarkerToneClass(item.id)}`}>
-                  <div class="h-9 w-9 overflow-hidden rounded-[12px] border border-paper-300/70 bg-paper-100/90">
+              <div class={`flex flex-col items-center gap-1 ${item.id === selectedId ? '-translate-y-0.5' : ''}`}>
+                <div
+                  class={`flex w-full items-center gap-2 rounded-xl bg-paper-100/85 p-1.5 ${getMarkerShellClass(item.id)}`}
+                >
+                  <div class="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-paper-200/80">
                     <img class="h-full w-full object-cover" src={item.imageUrl} alt={item.filename} draggable="false" />
                   </div>
-                  <div class="grid min-w-[4.75rem] gap-0.5 text-left leading-none">
-                    <span class="text-[0.52rem] font-bold uppercase tracking-[0.2em] text-muted/70">Place</span>
-                    <span class="text-[0.72rem] font-semibold">{getPositionLabel(item)}</span>
+                  <div class="grid min-w-0 flex-1 gap-0.5 text-left leading-tight">
+                    <span class="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-muted/80">Place</span>
+                    <span class="truncate text-[0.78rem] font-semibold text-ink">{getPositionLabel(item)}</span>
                   </div>
                 </div>
-                <div class={`h-9 w-[2px] rounded-full ${getMarkerStemClass(item.id)}`}></div>
-                <div class={`grid h-4 w-4 place-items-center rotate-45 rounded-[4px] border-2 shadow-[0_10px_18px_rgba(47,36,27,0.18)] ${getMarkerTipClass(item.id)}`}>
-                  <span class={`block h-1.5 w-1.5 -rotate-45 rounded-full ${getMarkerCoreClass(item.id)}`}></span>
-                </div>
+                <div class="h-8 w-px rounded-full bg-linear-to-b from-clay-400/90 to-sun-300/85"></div>
+                <div class={`h-2 w-2 rounded-full ${getStatusDotClass(item.id)} shadow-[0_0_12px_currentColor]`}></div>
               </div>
             </button>
           {/if}
