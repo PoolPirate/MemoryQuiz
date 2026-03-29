@@ -19,7 +19,6 @@
   const GUESS_ZOOM = 6;
   const RESULT_PADDING = 80;
   const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
-  const ATTRIBUTION_TEXT = '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
 
   let { guess = null, answer = null, allowedRadiusKm, disabled = false, onSelect, onConfirm }: Props = $props();
 
@@ -216,7 +215,7 @@
 
         localMap.addControl(new mgl.NavigationControl({ showCompass: false }), 'top-right');
         localMap.addControl(new mgl.ScaleControl({ maxWidth: 120 }), 'bottom-right');
-        localMap.addControl(new mgl.AttributionControl({ compact: true, customAttribution: ATTRIBUTION_TEXT }), 'bottom-left');
+        localMap.addControl(new mgl.AttributionControl({ compact: false }), 'bottom-left');
 
         localMap.on('load', () => {
           if (disposed) return;
@@ -428,7 +427,7 @@
   {/if}
 
   <div
-    class={`pointer-events-auto absolute z-10 flex flex-col overflow-hidden border bg-[linear-gradient(180deg,rgba(11,20,32,0.98),rgba(14,28,45,0.97))] shadow-[0_30px_90px_rgba(7,11,20,0.48)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${panelState === 'preview' ? 'bottom-5 right-5 aspect-[4/3] w-[min(52vw,280px)] min-w-[170px] origin-bottom-right scale-[0.92] rounded-[28px] border-paper-300/45 hover:scale-100 sm:w-[min(32vw,300px)] lg:w-[300px]' : panelState === 'expanded' ? 'inset-x-4 bottom-4 top-[30dvh] rounded-[32px] border-paper-300/65 md:bottom-4 md:left-[30vw] md:right-4 md:top-4' : 'inset-0 rounded-none border-paper-300/65'}`}
+    class={`world-map-panel pointer-events-auto absolute z-10 flex flex-col overflow-hidden border bg-[linear-gradient(180deg,rgba(11,20,32,0.98),rgba(14,28,45,0.97))] shadow-[0_30px_90px_rgba(7,11,20,0.48)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${panelState === 'preview' ? 'is-preview bottom-5 right-5 aspect-[4/3] w-[min(52vw,280px)] min-w-[170px] origin-bottom-right scale-[0.92] rounded-[28px] border-paper-300/45 hover:scale-100 sm:w-[min(32vw,300px)] lg:w-[300px]' : panelState === 'expanded' ? 'inset-x-4 bottom-4 top-[30dvh] rounded-[32px] border-paper-300/65 md:bottom-4 md:left-[30vw] md:right-4 md:top-4' : 'inset-0 rounded-none border-paper-300/65'}`}
     role={panelState === 'preview' ? undefined : 'dialog'}
     aria-modal={panelState === 'preview' ? undefined : 'true'}
     aria-label={panelState === 'result' ? 'Location comparison map' : 'Location guess map'}
@@ -482,17 +481,31 @@
 </div>
 
 <style>
-  :global(.world-map-host .maplibregl-ctrl-attrib) {
-    font-size: 10px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    padding: 2px 8px;
-    color: rgba(255, 247, 255, 0.6);
+  :global(.world-map-panel.is-preview .maplibregl-ctrl-top-right),
+  :global(.world-map-panel.is-preview .maplibregl-ctrl-bottom-left),
+  :global(.world-map-panel.is-preview .maplibregl-ctrl-bottom-right) {
+    display: none;
   }
 
-  :global(.world-map-host .maplibregl-ctrl-attrib a) {
-    color: rgba(255, 247, 255, 0.7);
+  :global(.world-map-host .maplibregl-ctrl-bottom-left) {
+    left: 12px !important;
+    bottom: 12px !important;
+  }
+
+  :global(.world-map-host .maplibregl-ctrl-bottom-left > .maplibregl-ctrl.maplibregl-ctrl-attrib) {
+    font-size: 10px;
+    margin: 0 !important;
+    padding: 3px 8px !important;
+    background: rgba(15, 23, 42, 0.82) !important;
+    backdrop-filter: blur(8px);
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 247, 255, 0.18);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    color: rgba(255, 247, 255, 0.88) !important;
+  }
+
+  :global(.world-map-host .maplibregl-ctrl-bottom-left > .maplibregl-ctrl.maplibregl-ctrl-attrib a) {
+    color: rgba(255, 247, 255, 0.95) !important;
   }
 
   :global(.world-map-host .maplibregl-ctrl-scale) {
