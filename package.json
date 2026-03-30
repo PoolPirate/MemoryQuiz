@@ -1,6 +1,6 @@
 {
   "name": "memoryquiz",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Desktop memory games powered by Google Photos Takeout exports.",
   "author": "OpenCode",
